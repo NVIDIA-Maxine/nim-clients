@@ -10,6 +10,7 @@ syntax = "proto3";
 
 package nvidia.maxine.eyecontact.v1;
 
+import "google/protobuf/any.proto";
 import "google/protobuf/empty.proto";
 
 // The MaxineEyeContactService provides APIs to run the
@@ -37,67 +38,106 @@ service MaxineEyeContactService {
       returns (stream RedirectGazeResponse) {}
 }
 
+// LossyEncoding specifies parameters for lossy video compression
+message LossyEncoding {
+  // Target bitrate for video encoding in bits per second
+  optional uint32 bitrate = 1;
+  // Interval between IDR frames (keyframes) in number of frames
+  optional uint32 idr_interval = 2;
+}
+
+// CustomEncodingParams allows specifying custom encoding parameters
+message CustomEncodingParams {
+  // Map of string key-value pairs for custom encoding configuration
+  // Each value can be any protobuf message type using google.protobuf.Any
+  map<string, google.protobuf.Any> custom = 1;
+}
+
+// OutputVideoEncoding specifies parameters for the output video encoding
+message OutputVideoEncoding {
+  // Only one of these encoding types can be specified
+  oneof encoding_type {
+    // If true, use lossless encoding with no compression
+    bool lossless = 1;
+    // Use lossy encoding with configurable bitrate and keyframe settings
+    LossyEncoding lossy = 2;
+    // Use custom encoding parameters specified as key-value pairs
+    CustomEncodingParams custom_encoding = 3;
+  }
+}
+
 // Configuration for Maxine Eye Contact.
 message RedirectGazeConfig {
   // Flag to control temporal filtering 
   // Default: 0xffffffff
-  uint32 temporal = 1;
+  optional uint32 temporal = 1;
 
   // Flag to toggle detection of eye closure and occlusion on/off
   // Default: 0 | Range: [0, 1]
-  uint32 detect_closure = 2;
+  optional uint32 detect_closure = 2;
 
   // Eye size sensitivity parameter
   // Default: 3 | Range: [2, 6]
-  uint32 eye_size_sensitivity = 3;
+  optional uint32 eye_size_sensitivity = 3;
 
   // Flag to toggle look away on/off.
   // Default: 0 | Range: [0, 1]
-  uint32 enable_lookaway = 4;
+  optional uint32 enable_lookaway = 4;
 
   // Maximum value of gaze offset angle (degrees) during a random look away
   // Default: 5 | Range: [1, 10]
-  uint32 lookaway_max_offset = 5;
+  optional uint32 lookaway_max_offset = 5;
 
   // Minimum limit for the number of frames at which random look away occurs
   // Default: 100 | Range: [1, 600]
-  uint32 lookaway_interval_min = 6;
+  optional uint32 lookaway_interval_min = 6;
 
   // Range for picking the number of frames at which random look away occurs
   // Default: 250 | Range: [1, 600]
-  uint32 lookaway_interval_range = 7;
+  optional uint32 lookaway_interval_range = 7;
 
-  // Gaze pitch threshold (degrees) at which the redirection starts transitioning
+  // Gaze pitch threshold (degrees) at which the redirection starts 
+  // transitioning
   // Default: 20 | Range: [10, 35]
-  float gaze_pitch_threshold_low = 8;
+  optional float gaze_pitch_threshold_low = 8;
 
-  // Gaze pitch threshold (degrees) at which the redirection is equal to estimated gaze
+  // Gaze pitch threshold (degrees) at which the redirection is equal to 
+  // estimated gaze
   // Default: 30 | Range: [10, 35] 
-  float gaze_pitch_threshold_high = 9;
+  optional float gaze_pitch_threshold_high = 9;
 
-  // Gaze yaw threshold (degrees) at which the redirection starts transitioning
+  // Gaze yaw threshold (degrees) at which the redirection starts 
+  // transitioning
   // Default: 20 | Range: [10, 35]
-  float gaze_yaw_threshold_low = 10;
+  optional float gaze_yaw_threshold_low = 10;
 
-  // Gaze yaw threshold (degrees) at which the redirection the redirection is equal to estimated gaze
+  // Gaze yaw threshold (degrees) at which the redirection the redirection 
+  // is equal to estimated gaze
   // Default: 30 | Range: [10 ,35]
-  float gaze_yaw_threshold_high = 11;
+  optional float gaze_yaw_threshold_high = 11;
 
-  // Head pose pitch yaw threshold (degrees) at which the redirection start transitioning away from camera towards estimated gaze
+  // Head pose pitch yaw threshold (degrees) at which the redirection 
+  // start transitioning away from camera towards estimated gaze
   // Default: 15 | Range: [10, 35]
-  float head_pitch_threshold_low = 12;
+  optional float head_pitch_threshold_low = 12;
   
-  // Head pose pitch yaw threshold (degrees) at which the redirection is equal to estimated gaze
+  // Head pose pitch yaw threshold (degrees) at which the redirection is 
+  // equal to estimated gaze
   // Default: 15 | Range: [10, 35]
-  float head_pitch_threshold_high = 13;
+  optional float head_pitch_threshold_high = 13;
 
-  // Head pose yaw threshold (degrees) at which the redirection starts transitioning
+  // Head pose yaw threshold (degrees) at which the redirection starts 
+  // transitioning
   // Default: 15 | Range: [10, 35]
-  float head_yaw_threshold_low = 14;
+  optional float head_yaw_threshold_low = 14;
 
-  // Head pose yaw threshold (degrees) at which the redirection is equal to estimated gaze
+  // Head pose yaw threshold (degrees) at which the redirection is equal 
+  // to estimated gaze
   // Default: 15 | Range: [10, 35]
-  float head_yaw_threshold_high = 15;
+  optional float head_yaw_threshold_high = 15;
+
+  // Output video encoding parameters
+  optional OutputVideoEncoding output_video_encoding = 16;
 }
 
 // Input message for RedirectGaze API.
