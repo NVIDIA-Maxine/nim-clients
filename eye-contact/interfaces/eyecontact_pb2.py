@@ -22,22 +22,33 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from google.protobuf import any_pb2 as google_dot_protobuf_dot_any__pb2
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10\x65yecontact.proto\x12\x1bnvidia.maxine.eyecontact.v1\x1a\x1bgoogle/protobuf/empty.proto\"\xde\x03\n\x12RedirectGazeConfig\x12\x10\n\x08temporal\x18\x01 \x01(\r\x12\x16\n\x0e\x64\x65tect_closure\x18\x02 \x01(\r\x12\x1c\n\x14\x65ye_size_sensitivity\x18\x03 \x01(\r\x12\x17\n\x0f\x65nable_lookaway\x18\x04 \x01(\r\x12\x1b\n\x13lookaway_max_offset\x18\x05 \x01(\r\x12\x1d\n\x15lookaway_interval_min\x18\x06 \x01(\r\x12\x1f\n\x17lookaway_interval_range\x18\x07 \x01(\r\x12 \n\x18gaze_pitch_threshold_low\x18\x08 \x01(\x02\x12!\n\x19gaze_pitch_threshold_high\x18\t \x01(\x02\x12\x1e\n\x16gaze_yaw_threshold_low\x18\n \x01(\x02\x12\x1f\n\x17gaze_yaw_threshold_high\x18\x0b \x01(\x02\x12 \n\x18head_pitch_threshold_low\x18\x0c \x01(\x02\x12!\n\x19head_pitch_threshold_high\x18\r \x01(\x02\x12\x1e\n\x16head_yaw_threshold_low\x18\x0e \x01(\x02\x12\x1f\n\x17head_yaw_threshold_high\x18\x0f \x01(\x02\"\x83\x01\n\x13RedirectGazeRequest\x12\x41\n\x06\x63onfig\x18\x01 \x01(\x0b\x32/.nvidia.maxine.eyecontact.v1.RedirectGazeConfigH\x00\x12\x19\n\x0fvideo_file_data\x18\x02 \x01(\x0cH\x00\x42\x0e\n\x0cstream_input\"\xb2\x01\n\x14RedirectGazeResponse\x12\x41\n\x06\x63onfig\x18\x01 \x01(\x0b\x32/.nvidia.maxine.eyecontact.v1.RedirectGazeConfigH\x00\x12\x19\n\x0fvideo_file_data\x18\x02 \x01(\x0cH\x00\x12+\n\tkeepalive\x18\x03 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x42\x0f\n\rstream_output2\x94\x01\n\x17MaxineEyeContactService\x12y\n\x0cRedirectGaze\x12\x30.nvidia.maxine.eyecontact.v1.RedirectGazeRequest\x1a\x31.nvidia.maxine.eyecontact.v1.RedirectGazeResponse\"\x00(\x01\x30\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10\x65yecontact.proto\x12\x1bnvidia.maxine.eyecontact.v1\x1a\x19google/protobuf/any.proto\x1a\x1bgoogle/protobuf/empty.proto\"]\n\rLossyEncoding\x12\x14\n\x07\x62itrate\x18\x01 \x01(\rH\x00\x88\x01\x01\x12\x19\n\x0cidr_interval\x18\x02 \x01(\rH\x01\x88\x01\x01\x42\n\n\x08_bitrateB\x0f\n\r_idr_interval\"\xaa\x01\n\x14\x43ustomEncodingParams\x12M\n\x06\x63ustom\x18\x01 \x03(\x0b\x32=.nvidia.maxine.eyecontact.v1.CustomEncodingParams.CustomEntry\x1a\x43\n\x0b\x43ustomEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12#\n\x05value\x18\x02 \x01(\x0b\x32\x14.google.protobuf.Any:\x02\x38\x01\"\xc5\x01\n\x13OutputVideoEncoding\x12\x12\n\x08lossless\x18\x01 \x01(\x08H\x00\x12;\n\x05lossy\x18\x02 \x01(\x0b\x32*.nvidia.maxine.eyecontact.v1.LossyEncodingH\x00\x12L\n\x0f\x63ustom_encoding\x18\x03 \x01(\x0b\x32\x31.nvidia.maxine.eyecontact.v1.CustomEncodingParamsH\x00\x42\x0f\n\rencoding_type\"\x98\x08\n\x12RedirectGazeConfig\x12\x15\n\x08temporal\x18\x01 \x01(\rH\x00\x88\x01\x01\x12\x1b\n\x0e\x64\x65tect_closure\x18\x02 \x01(\rH\x01\x88\x01\x01\x12!\n\x14\x65ye_size_sensitivity\x18\x03 \x01(\rH\x02\x88\x01\x01\x12\x1c\n\x0f\x65nable_lookaway\x18\x04 \x01(\rH\x03\x88\x01\x01\x12 \n\x13lookaway_max_offset\x18\x05 \x01(\rH\x04\x88\x01\x01\x12\"\n\x15lookaway_interval_min\x18\x06 \x01(\rH\x05\x88\x01\x01\x12$\n\x17lookaway_interval_range\x18\x07 \x01(\rH\x06\x88\x01\x01\x12%\n\x18gaze_pitch_threshold_low\x18\x08 \x01(\x02H\x07\x88\x01\x01\x12&\n\x19gaze_pitch_threshold_high\x18\t \x01(\x02H\x08\x88\x01\x01\x12#\n\x16gaze_yaw_threshold_low\x18\n \x01(\x02H\t\x88\x01\x01\x12$\n\x17gaze_yaw_threshold_high\x18\x0b \x01(\x02H\n\x88\x01\x01\x12%\n\x18head_pitch_threshold_low\x18\x0c \x01(\x02H\x0b\x88\x01\x01\x12&\n\x19head_pitch_threshold_high\x18\r \x01(\x02H\x0c\x88\x01\x01\x12#\n\x16head_yaw_threshold_low\x18\x0e \x01(\x02H\r\x88\x01\x01\x12$\n\x17head_yaw_threshold_high\x18\x0f \x01(\x02H\x0e\x88\x01\x01\x12T\n\x15output_video_encoding\x18\x10 \x01(\x0b\x32\x30.nvidia.maxine.eyecontact.v1.OutputVideoEncodingH\x0f\x88\x01\x01\x42\x0b\n\t_temporalB\x11\n\x0f_detect_closureB\x17\n\x15_eye_size_sensitivityB\x12\n\x10_enable_lookawayB\x16\n\x14_lookaway_max_offsetB\x18\n\x16_lookaway_interval_minB\x1a\n\x18_lookaway_interval_rangeB\x1b\n\x19_gaze_pitch_threshold_lowB\x1c\n\x1a_gaze_pitch_threshold_highB\x19\n\x17_gaze_yaw_threshold_lowB\x1a\n\x18_gaze_yaw_threshold_highB\x1b\n\x19_head_pitch_threshold_lowB\x1c\n\x1a_head_pitch_threshold_highB\x19\n\x17_head_yaw_threshold_lowB\x1a\n\x18_head_yaw_threshold_highB\x18\n\x16_output_video_encoding\"\x83\x01\n\x13RedirectGazeRequest\x12\x41\n\x06\x63onfig\x18\x01 \x01(\x0b\x32/.nvidia.maxine.eyecontact.v1.RedirectGazeConfigH\x00\x12\x19\n\x0fvideo_file_data\x18\x02 \x01(\x0cH\x00\x42\x0e\n\x0cstream_input\"\xb2\x01\n\x14RedirectGazeResponse\x12\x41\n\x06\x63onfig\x18\x01 \x01(\x0b\x32/.nvidia.maxine.eyecontact.v1.RedirectGazeConfigH\x00\x12\x19\n\x0fvideo_file_data\x18\x02 \x01(\x0cH\x00\x12+\n\tkeepalive\x18\x03 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x42\x0f\n\rstream_output2\x94\x01\n\x17MaxineEyeContactService\x12y\n\x0cRedirectGaze\x12\x30.nvidia.maxine.eyecontact.v1.RedirectGazeRequest\x1a\x31.nvidia.maxine.eyecontact.v1.RedirectGazeResponse\"\x00(\x01\x30\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'eyecontact_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_REDIRECTGAZECONFIG']._serialized_start=79
-  _globals['_REDIRECTGAZECONFIG']._serialized_end=557
-  _globals['_REDIRECTGAZEREQUEST']._serialized_start=560
-  _globals['_REDIRECTGAZEREQUEST']._serialized_end=691
-  _globals['_REDIRECTGAZERESPONSE']._serialized_start=694
-  _globals['_REDIRECTGAZERESPONSE']._serialized_end=872
-  _globals['_MAXINEEYECONTACTSERVICE']._serialized_start=875
-  _globals['_MAXINEEYECONTACTSERVICE']._serialized_end=1023
+  _globals['_CUSTOMENCODINGPARAMS_CUSTOMENTRY']._loaded_options = None
+  _globals['_CUSTOMENCODINGPARAMS_CUSTOMENTRY']._serialized_options = b'8\001'
+  _globals['_LOSSYENCODING']._serialized_start=105
+  _globals['_LOSSYENCODING']._serialized_end=198
+  _globals['_CUSTOMENCODINGPARAMS']._serialized_start=201
+  _globals['_CUSTOMENCODINGPARAMS']._serialized_end=371
+  _globals['_CUSTOMENCODINGPARAMS_CUSTOMENTRY']._serialized_start=304
+  _globals['_CUSTOMENCODINGPARAMS_CUSTOMENTRY']._serialized_end=371
+  _globals['_OUTPUTVIDEOENCODING']._serialized_start=374
+  _globals['_OUTPUTVIDEOENCODING']._serialized_end=571
+  _globals['_REDIRECTGAZECONFIG']._serialized_start=574
+  _globals['_REDIRECTGAZECONFIG']._serialized_end=1622
+  _globals['_REDIRECTGAZEREQUEST']._serialized_start=1625
+  _globals['_REDIRECTGAZEREQUEST']._serialized_end=1756
+  _globals['_REDIRECTGAZERESPONSE']._serialized_start=1759
+  _globals['_REDIRECTGAZERESPONSE']._serialized_end=1937
+  _globals['_MAXINEEYECONTACTSERVICE']._serialized_start=1940
+  _globals['_MAXINEEYECONTACTSERVICE']._serialized_end=2088
 # @@protoc_insertion_point(module_scope)

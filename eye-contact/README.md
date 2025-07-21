@@ -11,8 +11,9 @@ To experience the NVIDIA Maxine Eye Contact NIM API without having to host your 
 ## Pre-requisites
 
 - Ensure you have Python 3.10 or above installed on your system.
-Please refer to the [Python documentation](https://www.python.org/downloads/) for download and installation instructions.
-- Access to NVIDIA Maxine Eye Contact NIM Container / Service
+For download and installation instructions, refer to the [Python documentation](https://www.python.org/downloads/).
+- Access to NVIDIA Maxine Eye Contact NIM container and service.
+- MP4 input files with H.264 video codec (audio optional) and videos with Variable Frame Rate (VFR) are not supported.
 
 ## Usage guide
 
@@ -88,15 +89,19 @@ python eye-contact.py \
   --ssl-root-cert <ssl_root_cert_filepath>
  ```
 
-- Example command to process the packaged sample video
+The following command uses the sample video file and generates an `output.mp4` file in the current folder:
 
-The following command uses the sample video file & generates an ouput.mp4 file in the current folder
+   ```bash
+   python eye-contact.py --target 127.0.0.1:8001 --input ../assets/transactional.mp4 --output output.mp4
+   ```
 
-```bash
-    python eye-contact.py --target 127.0.0.1:8001 --input ../assets/sample_input.mp4 --output output.mp4
-```
+The following command uses streaming mode (for streamable video files):
 
-- Note the supported file type is mp4
+   ```bash
+   python eye-contact.py --target 127.0.0.1:8001 --input ../assets/streamable.mp4 --output output.mp4 --streaming
+   ```
+
+> **Note:** The supported file type is MP4.
 
 #### Usage for Preview API request
 
@@ -120,9 +125,69 @@ The following command uses the sample video file & generates an ouput.mp4 file i
 -  `--target`   IP:port of gRPC service, when hosted locally. Use grpc.nvcf.nvidia.com:443 when hosted on NVCF.
 -  `--input`    The path to the input video file.
 -  `--output`   The path for the output video file.
+-  `--streaming` Flag to enable gRPC streaming mode. Required for streamable video input.
 -  `--api-key`  NGC API key required for authentication, utilized when using TRY API ignored otherwise
 -  `--function-id`  NVCF function ID for the service, utilized when using TRY API ignored otherwise
 
-Note when using SSL mode the default path for the credentials is `../ssl_key/<filename>.pem`
+#### Advanced Configuration Parameters
 
-Refer the [docs](https://docs.nvidia.com/nim/maxine/eye-contact/latest/basic-inference.html) for more information
+The Eye Contact client supports extensive parameter customization for fine-tuning behavior:
+
+**Video Encoding Parameters**
+
+- `lossless`: Enables lossless video encoding. This setting overrides any bitrate configuration to ensure maximum quality output, although it results in larger file sizes. Use this mode when quality is the top priority.
+   ```bash
+   python eye-contact.py --target 127.0.0.1:8001 --lossless
+   ```
+
+- `bitrate`: Sets the target bitrate for video encoding in bits per second (bps). Higher bitrates result in better video quality but larger file sizes. This parameter allows balancing quality and file size by controlling the video bitrate. The default is 3,000,000 bps (3 Mbps). For example, setting `--bitrate 5000000` targets 5 Mbps encoding.
+   ```bash
+   python eye-contact.py --target 127.0.0.1:8001 --bitrate 5000000
+   ```
+
+- `idr-interval`: Sets the interval between instantaneous decoding refresh (IDR) frames in the encoded video. IDR frames are special I-frames that clear all reference buffers, allowing the video to be decoded from that point without needing previous frames. Lower values improve seeking accuracy, random access, and overall encoding quality but increase file size; higher values reduce file size but may impact seeking performance and quality. The default is 8 frames.
+   ```bash
+   python eye-contact.py --target 127.0.0.1:8001 --idr-interval 10
+   ```
+
+- `custom-encoding-params`: Passes custom encoding parameters as a JSON string, which provides fine-grained control for expert users via JSON configuration. These parameters are used to configure properties of the GStreamer nvvideo4linux2 encoder plugin, allowing direct control over the underlying hardware encoder settings.
+   ```bash
+   python eye-contact.py --custom-encoding-params '{"idrinterval": 20, "maxbitrate": 3000000}'
+   ```
+
+**Note:** Custom encoding parameters are for expert users who need fine-grained control over video encoding. Incorrect values can cause encoding failures or poor-quality output. To configure the nvenc encoder, refer to [Gst properties of the Gst-nvvideo4linux2 encoder plugin](https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_plugin_gst-nvvideo4linux2.html#:~:text=The%20following%20table%20summarizes%20the%20Gst%20properties%20of%20the%20Gst%2Dnvvideo4linux2%20encoder%20plugin).
+
+**Eye Contact Behavior Parameters**
+-  `--temporal` Flag to control temporal filtering (default: 4294967295).
+-  `--detect-closure` Flag to toggle detection of eye closure and occlusion (default: 0, choices: [0, 1]).
+-  `--eye-size-sensitivity` Eye size sensitivity parameter (default: 3, range: [2, 6]).
+-  `--enable-lookaway` Flag to toggle look away (default: 0, choices: [0, 1]).
+-  `--lookaway-max-offset` Maximum value of gaze offset angle (degrees) during a random look away (default: 5, range: [1, 10]).
+-  `--lookaway-interval-min` Minimum number of frames at which random look away occurs (default: 100, range: [1, 600]).
+-  `--lookaway-interval-range` Range for picking the number of frames at which random look away occurs (default: 250, range: [1, 600]).
+
+**Gaze Threshold Parameters**
+-  `--gaze-pitch-threshold-low` Gaze pitch threshold (degrees) at which the redirection starts transitioning (default: 20.0, range: [10, 35]).
+-  `--gaze-pitch-threshold-high` Gaze pitch threshold (degrees) at which the redirection is equal to estimated gaze (default: 30.0, range: [10, 35]).
+-  `--gaze-yaw-threshold-low` Gaze yaw threshold (degrees) at which the redirection starts transitioning (default: 20.0, range: [10, 35]).
+-  `--gaze-yaw-threshold-high` Gaze yaw threshold (degrees) at which the redirection is equal to estimated gaze (default: 30.0, range: [10, 35]).
+
+**Head Pose Threshold Parameters**
+-  `--head-pitch-threshold-low` Head pose pitch threshold (degrees) at which the redirection starts transitioning away from camera toward estimated gaze (default: 15.0, range: [10, 35]).
+-  `--head-pitch-threshold-high` Head pose pitch threshold (degrees) at which the redirection is equal to estimated gaze (default: 15.0, range: [10, 35]).
+-  `--head-yaw-threshold-low` Head pose yaw threshold (degrees) at which the redirection starts transitioning (default: 15.0, range: [10, 35]).
+-  `--head-yaw-threshold-high` Head pose yaw threshold (degrees) at which the redirection is equal to estimated gaze (default: 15.0, range: [10, 35]).
+
+#### Important Notes about Streaming Mode
+
+Streaming mode (`--streaming`) is required when processing videos that are optimized for streaming (that is, they have the 'moov' atom at the beginning).
+
+If you encounter an error when processing non-streamable video files, you can convert your video to be streamable using the following command:
+  ```bash
+  ffmpeg -i input.mp4 -movflags +faststart output_streamable.mp4
+  ```
+The client automatically validates video compatibility with the selected mode and provides helpful error messages.
+
+When using SSL mode, the default path for the credentials is `../ssl_key/<filename>.pem`.
+
+For more information, refer to [Basic Inference](https://docs.nvidia.com/nim/maxine/eye-contact/latest/basic-inference.html) in the Eye Contact NIM documentation.
