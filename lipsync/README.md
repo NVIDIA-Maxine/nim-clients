@@ -369,6 +369,21 @@ python lipsync.py --target 127.0.0.1:8001 --head-movement-speed 0
 
 > **Note**: **For an interactive experience and to explore all the configuration options described above, you can use the provided Jupyter notebook that demonstrates comprehensive LipSync NIM functionality. The notebook is located at [`notebook/lipsync_notebook.ipynb`](notebook/lipsync_notebook.ipynb) and can be run directly within your VS Code editor or any Jupyter environment.**
 
+##### Language Model Selection
+The LipSync NIM ships a generic, language-agnostic model (default) plus fine-tuned models for German, Spanish, and French. The model is chosen when the NIM container is launched, using the `NIM_TAGS_SELECTOR` environment variable. There is no client-side language option.
+
+```bash
+# Generic, language-agnostic model (default): omit NIM_TAGS_SELECTOR
+docker run ... nvcr.io/nim/nvidia/lipsync:latest
+
+# Language-specific model (de, es, or fr):
+docker run ... -e NIM_TAGS_SELECTOR="language=de" nvcr.io/nim/nvidia/lipsync:latest
+```
+
+Only `de`, `es`, and `fr` are supported. Any other values causes the container to fail at startup; omit the variable to use the generic model. For details, see [Getting Started](https://docs.nvidia.com/nim/maxine/lipsync/latest/getting-started.html).
+
+> **Note:** Language selection is a server-side deployment setting. No client-side changes are required.
+
 
 ##### Lipsync Debug Mode
 The LipSync NIM includes a debug mode that provides visual feedback during processing. When enabled, this mode overlays diagnostic information on each output frame, making it easier to verify effect behavior and troubleshoot issues.
