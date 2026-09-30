@@ -32,8 +32,11 @@
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 echo $SCRIPT_DIR
 # Define paths for proto files and output directory
-PROTOS_DIR=$(realpath "$SCRIPT_DIR/../proto/nvidia/maxine/eyecontact/v1")
+PROTOS_DIR=$(realpath "$SCRIPT_DIR/../proto/")
 OUT_DIR=$(realpath "$SCRIPT_DIR/../../interfaces/")
+
+EYECONTACT_PROTO="$PROTOS_DIR/nvidia/maxine/eyecontact/v1/eyecontact.proto"
+SERVICE_INFO_PROTO="$PROTOS_DIR/nvidia/ai4m/common/v1/service_info.proto"
 
 # Check if required directories and files exist
 if [ ! -d "$PROTOS_DIR" ]; then
@@ -41,10 +44,12 @@ if [ ! -d "$PROTOS_DIR" ]; then
     exit 1
 fi
 
-if [ ! -f "$PROTOS_DIR/eyecontact.proto" ]; then
-    echo "[Error] Protobuf file not found: $PROTOS_DIR/eyecontact.proto"
-    exit 1
-fi
+for proto_file in "$EYECONTACT_PROTO" "$SERVICE_INFO_PROTO"; do
+    if [ ! -f "$proto_file" ]; then
+        echo "[Error] Protobuf file not found: $proto_file"
+        exit 1
+    fi
+done
 
 # Check if Python is installed
 if ! command -v python3 > /dev/null; then
@@ -61,7 +66,8 @@ python3 -m grpc_tools.protoc -I="$PROTOS_DIR" \
                              --python_out="$OUT_DIR" \
                              --pyi_out="$OUT_DIR" \
                              --grpc_python_out="$OUT_DIR" \
-                             "$PROTOS_DIR/eyecontact.proto"
+                             "$SERVICE_INFO_PROTO" \
+                             "$EYECONTACT_PROTO"
 
 # Check if the command succeeded
 if [ $? -ne 0 ]; then

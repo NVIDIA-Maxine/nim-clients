@@ -26,6 +26,7 @@ package nvidia.maxine.eyecontact.v1;
 
 import "google/protobuf/any.proto";
 import "google/protobuf/empty.proto";
+import "nvidia/ai4m/common/v1/service_info.proto";
 
 // The MaxineEyeContactService provides APIs to run the
 // Maxine Eye Contact feature.
@@ -152,6 +153,11 @@ message RedirectGazeConfig {
 
   // Output video encoding parameters
   optional OutputVideoEncoding output_video_encoding = 16;
+
+  // Flag to enable multi-person mode.
+  // Redirects gaze for every detected face instead of a single subject.
+  // Default: 0 | Range: [0, 1]
+  optional uint32 enable_multi_person = 17;
 }
 
 // Input message for RedirectGaze API.
@@ -167,8 +173,9 @@ message RedirectGazeRequest {
 }
 
 // Output message for RedirectGaze API.
-// May contain feature configuration, a chunk of output mp4 file data
-// or an empty message to keep the connection alive.
+// May contain feature configuration, a chunk of output mp4 file data,
+// an empty message to keep the connection alive, or a
+// ServiceInfo provenance banner.
 message RedirectGazeResponse {
   oneof stream_output {
     // Configuration parameters used
@@ -179,5 +186,9 @@ message RedirectGazeResponse {
 
     // Keep alive signaling flag
     google.protobuf.Empty keepalive = 3;
+
+    // Identifies the NIM producing the stream and the request being
+    // served (feature name/version, model identity, and request/session IDs).
+    nvidia.ai4m.common.v1.ServiceInfo service_info = 4;
   }
 }
