@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import syntheticvideodetector_pb2 as syntheticvideodetector__pb2
+from nvidia.maxine.syntheticvideodetector.v1 import syntheticvideodetector_pb2 as nvidia_dot_maxine_dot_syntheticvideodetector_dot_v1_dot_syntheticvideodetector__pb2
 
 GRPC_GENERATED_VERSION = '1.67.1'
 GRPC_VERSION = grpc.__version__
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in syntheticvideodetector_pb2_grpc.py depends on'
+        + f' but the generated code in nvidia/maxine/syntheticvideodetector/v1/syntheticvideodetector_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -39,8 +39,8 @@ class SyntheticVideoDetectorServiceStub(object):
         """
         self.DetectSyntheticVideo = channel.stream_stream(
                 '/nvidia.maxine.syntheticvideodetector.v1.SyntheticVideoDetectorService/DetectSyntheticVideo',
-                request_serializer=syntheticvideodetector__pb2.DetectSyntheticVideoRequest.SerializeToString,
-                response_deserializer=syntheticvideodetector__pb2.DetectSyntheticVideoResponse.FromString,
+                request_serializer=nvidia_dot_maxine_dot_syntheticvideodetector_dot_v1_dot_syntheticvideodetector__pb2.DetectSyntheticVideoRequest.SerializeToString,
+                response_deserializer=nvidia_dot_maxine_dot_syntheticvideodetector_dot_v1_dot_syntheticvideodetector__pb2.DetectSyntheticVideoResponse.FromString,
                 _registered_method=True)
 
 
@@ -68,8 +68,8 @@ def add_SyntheticVideoDetectorServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'DetectSyntheticVideo': grpc.stream_stream_rpc_method_handler(
                     servicer.DetectSyntheticVideo,
-                    request_deserializer=syntheticvideodetector__pb2.DetectSyntheticVideoRequest.FromString,
-                    response_serializer=syntheticvideodetector__pb2.DetectSyntheticVideoResponse.SerializeToString,
+                    request_deserializer=nvidia_dot_maxine_dot_syntheticvideodetector_dot_v1_dot_syntheticvideodetector__pb2.DetectSyntheticVideoRequest.FromString,
+                    response_serializer=nvidia_dot_maxine_dot_syntheticvideodetector_dot_v1_dot_syntheticvideodetector__pb2.DetectSyntheticVideoResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -100,8 +100,8 @@ class SyntheticVideoDetectorService(object):
             request_iterator,
             target,
             '/nvidia.maxine.syntheticvideodetector.v1.SyntheticVideoDetectorService/DetectSyntheticVideo',
-            syntheticvideodetector__pb2.DetectSyntheticVideoRequest.SerializeToString,
-            syntheticvideodetector__pb2.DetectSyntheticVideoResponse.FromString,
+            nvidia_dot_maxine_dot_syntheticvideodetector_dot_v1_dot_syntheticvideodetector__pb2.DetectSyntheticVideoRequest.SerializeToString,
+            nvidia_dot_maxine_dot_syntheticvideodetector_dot_v1_dot_syntheticvideodetector__pb2.DetectSyntheticVideoResponse.FromString,
             options,
             channel_credentials,
             insecure,

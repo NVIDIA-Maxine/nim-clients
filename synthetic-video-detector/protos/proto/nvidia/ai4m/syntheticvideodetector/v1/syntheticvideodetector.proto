@@ -1,0 +1,148 @@
+// SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION &
+// AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: MIT
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+// and/or sell copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+
+syntax = "proto3";
+
+package nvidia.ai4m.syntheticvideodetector.v1;
+
+import "google/protobuf/empty.proto";
+import "nvidia/ai4m/ingest/v1/presigned_url.proto";
+
+// SyntheticVideoDetectorService analyzes an input video and returns a
+// per-frame synthetic-content score along with an aggregated per-video
+// score.
+service SyntheticVideoDetectorService {
+
+  // DetectSyntheticVideo is a bidirectional streaming RPC. The client
+  // streams one MP4 video file per invocation, either as
+  // DetectSyntheticVideoRequest chunks (video_file_data) or as a single
+  // message carrying a pre-signed URL (presigned_url). The server returns a
+  // stream of DetectSyntheticVideoResponse messages: a one-shot ServiceInfo
+  // banner first, then FrameResultBatch messages as each inference batch
+  // completes, and a single DetectionResult carrying the aggregated score.
+  // Empty keepalive messages may be interleaved during quiet periods.
+  rpc DetectSyntheticVideo(stream DetectSyntheticVideoRequest)
+      returns (stream DetectSyntheticVideoResponse) {}
+}
+
+// Input message for DetectSyntheticVideo API. Exactly one input mode is
+// allowed per RPC invocation, selected by the video_input oneof:
+//
+//   1. Streamed-file mode (video_file_data): send one or more messages
+//      containing video_file_data; the full video is reconstructed by
+//      concatenating them in arrival order.
+//
+//   2. Pre-signed URL mode (presigned_url): send exactly one message
+//      containing presigned_url, then close the client side of the stream.
+//      The server validates the URL, downloads the object, integrity- and
+//      media-checks it, then runs inference.
+//
+// The two modes must never be mixed within one RPC invocation.
+message DetectSyntheticVideoRequest {
+  oneof video_input {
+    // Video file data chunk (byte-streaming path).
+    bytes video_file_data = 1;
+
+    // Pre-signed video location (S3 / pre-signed URL ingest path).
+    nvidia.ai4m.ingest.v1.PresignedUrl presigned_url = 2;
+  }
+}
+
+// Output message for DetectSyntheticVideo. Carries per-frame results,
+// the final aggregated result, a one-shot provenance banner, or a
+// keep-alive ping.
+message DetectSyntheticVideoResponse {
+  oneof stream_output {
+    // Provenance banner identifying the NIM that produced this response
+    // stream. Emitted exactly once as the first message of every
+    // response stream.
+    ServiceInfo service_info = 1;
+
+    // Per-frame detection results, batched. One FrameResultBatch is
+    // emitted per inference batch, carrying one inference batch's worth of
+    // FrameResult entries.
+    FrameResultBatch frame_results = 2;
+
+    // Final aggregated detection result for the whole video. Emitted
+    // exactly once at the end of the response stream.
+    DetectionResult final_result = 3;
+
+    // Keep-alive ping. Carries no payload. Emitted during quiet periods
+    // to prevent the connection from timing out.
+    google.protobuf.Empty keepalive = 4;
+  }
+}
+
+// Per-frame detection result.
+message FrameResult {
+  // 0-based frame identifier within the source video, in presentation
+  // (display) order.
+  uint32 frame_id = 1;
+
+  // Raw model output for this frame. Higher values indicate a higher
+  // likelihood that the frame is synthetic. Apply a sigmoid to obtain a
+  // probability in [0, 1].
+  float logit = 2;
+
+  // Presentation timestamp (PTS) of this frame, in nanoseconds from the start
+  // of the stream. Monotonically non-decreasing. seconds = timestamp_ns / 1e9.
+  int64 timestamp_ns = 3;
+}
+
+// Group of per-frame results emitted together, one batch per inference call.
+message FrameResultBatch {
+  repeated FrameResult results = 1;
+}
+
+// Aggregated detection result for the whole video. Per-frame data is
+// already available via the FrameResultBatch stream; this message carries
+// only the aggregates computed across all frames.
+message DetectionResult {
+  // Mean of all per-frame logits.
+  float mean_logit = 1;
+
+  // Video-level synthetic probability in [0, 1], Platt-calibrated as
+  // sigmoid(a * mean_logit + b). Higher means stronger evidence of synthetic
+  // content; lower means stronger evidence of real content. No decision
+  // threshold is applied server-side -- the client selects and applies its own
+  // operating threshold to this value (see client documentation).
+  float synthetic_probability = 2;
+
+  // Number of frames processed.
+  uint32 total_frames = 3;
+}
+
+// One-shot provenance banner identifying the NIM that produced this
+// response stream and the specific request being served.
+message ServiceInfo {
+  // Human-readable NIM identity, e.g. "Synthetic Video Detector v2.0.0".
+  string nim_version = 1;
+
+  // Identity of the inference graph: ensemble name and weight version.
+  // Example: "dinov2+dinov3 fp16 v1.0". Useful for reproducibility and
+  // for matching results against a specific shipped model build.
+  string model_version = 2;
+
+  // Server-assigned request identifier. Echo this in support tickets so
+  // the team can locate the corresponding server logs for the request.
+  string request_id = 3;
+}

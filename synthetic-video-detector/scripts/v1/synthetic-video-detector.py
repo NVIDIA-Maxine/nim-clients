@@ -48,9 +48,9 @@ from config import SyntheticDetectorConfig, parse_args  # noqa: E402
 from constants import DATA_CHUNK_SIZE, CLASSIFICATION_THRESHOLD  # noqa: E402
 
 # Setup paths for local imports
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 SCRIPT_PATH = str(pathlib.Path(__file__).parent.resolve())
-sys.path.insert(0, os.path.join(SCRIPT_PATH, "../interfaces"))
+sys.path.insert(0, os.path.join(SCRIPT_PATH, "../../interfaces"))
 
 # Import utils functions
 from utils.utils import (  # noqa: E402
@@ -60,8 +60,10 @@ from utils.utils import (  # noqa: E402
     validate_ssl_args,
 )
 
-import syntheticvideodetector_pb2  # noqa: E402
-import syntheticvideodetector_pb2_grpc  # noqa: E402
+from nvidia.maxine.syntheticvideodetector.v1 import (  # noqa: E402
+    syntheticvideodetector_pb2,
+    syntheticvideodetector_pb2_grpc,
+)
 
 
 def generate_request_for_inference(
@@ -363,6 +365,14 @@ def main():
 
     except grpc.RpcError as e:
         print(f"\nGRPC Error: {e.code()} - {e.details()}")
+        if e.code() == grpc.StatusCode.UNIMPLEMENTED:
+            print(
+                "\nThe server did not recognize this request. This is the v1 client "
+                "(API nvidia.maxine.syntheticvideodetector.v1); the target server appears "
+                "to be a v2 (nvidia.ai4m) deployment.\n"
+                "Use the v2 client for a v2 (self-hosted) server, or point --target at a "
+                "v1/NVCF Synthetic Video Detector deployment."
+            )
         print("\nDetection failed!")
         sys.exit(1)
     except KeyboardInterrupt:
