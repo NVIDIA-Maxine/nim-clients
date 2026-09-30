@@ -46,6 +46,7 @@ from config import ActiveSpeakerDetectionConfig, parse_args
 from constants import (
     AUDIO_ENCODING_CONFIGS,
     VIDEO_CODEC_CONFIGS,
+    VOICE_ACTIVITY_SMOOTHING_CONFIGS,
     DATA_CHUNK_SIZE,
     DIARIZATION_WORDS_BATCH_SIZE,
 )
@@ -66,6 +67,30 @@ from nvidia.ai4m.activespeakerdetection.v1 import activespeakerdetection_pb2  # 
 from nvidia.ai4m.activespeakerdetection.v1 import activespeakerdetection_pb2_grpc  # noqa: E402
 from nvidia.ai4m.audio.v1 import audio_pb2  # noqa: E402
 from nvidia.ai4m.video.v1 import video_pb2  # noqa: E402
+
+# gRPC metadata key the server inspects to recover the client-assigned session
+# id (see NV_AI4M_SESSION_ID_METADATA_KEY on the server; defaults to this).
+CLIENT_SESSION_ID_METADATA_KEY = "client-session-id"
+
+
+def build_request_metadata(args) -> Optional[tuple]:
+    """Build the gRPC request metadata, including the client session id.
+
+    Combines the preview-mode metadata (authorization / function-id) with the
+    optional client-session-id header so the server can echo it back in
+    ServiceInfo and correlate logs.
+
+    Args:
+        args: Parsed command line arguments.
+
+    Returns:
+        A tuple of ``(key, value)`` metadata pairs, or ``None`` if empty.
+    """
+    metadata = list(create_request_metadata(args) or ())
+    client_session_id = getattr(args, "client_session_id", None)
+    if client_session_id:
+        metadata.append((CLIENT_SESSION_ID_METADATA_KEY, client_session_id))
+    return tuple(metadata) if metadata else None
 
 
 def generate_request_for_inference(
@@ -97,6 +122,20 @@ def generate_request_for_inference(
     detection_config = activespeakerdetection_pb2.ActiveSpeakerDetectionConfig(
         input_video_config=video_config
     )
+
+    # Voice-activity smoothing (optional). Leave unset to use the deployment
+    # default (NV_AI4M_ASD_VA_SMOOTHING).
+    if config.voice_activity_smoothing is not None:
+        detection_config.voice_activity_smoothing = VOICE_ACTIVITY_SMOOTHING_CONFIGS[
+            config.voice_activity_smoothing
+        ]
+        print(f"Voice-activity smoothing: {config.voice_activity_smoothing}")
+
+    # Speaker detection threshold (optional). Leave unset to use the server's
+    # configured default; the server validates the (0, 1) range.
+    if config.speaker_detection_threshold is not None:
+        detection_config.speaker_detection_threshold = config.speaker_detection_threshold
+        print(f"Speaker detection threshold: {config.speaker_detection_threshold}")
 
     # Set audio source mode and config
     if not config.skip_audio:
@@ -189,6 +228,27 @@ def generate_request_for_inference(
                 yield activespeakerdetection_pb2.DetectActiveSpeakerRequest(data=data)
 
 
+def print_service_info(service_info) -> None:
+    """Print the one-shot ServiceInfo provenance banner from the server.
+
+    Identifies the NIM producing the stream and the request being served
+    (feature name/version, model identity, and request/session IDs).
+
+    Args:
+        service_info: nvidia.ai4m.common.v1.ServiceInfo message from the response.
+    """
+    print("\n" + "-" * 60)
+    print("Service info (from server)")
+    print("-" * 60)
+    print(f"Feature name      : {service_info.feature_name}")
+    print(f"Feature version   : {service_info.feature_version}")
+    print(f"Model info        : {service_info.model_info}")
+    print(f"Server request ID : {service_info.server_request_id}")
+    print(f"Client session ID : {service_info.client_session_id}")
+    print("-" * 60)
+    sys.stdout.flush()
+
+
 def process_responses(
     response_iter: Iterator[activespeakerdetection_pb2.DetectActiveSpeakerResponse],
     config: ActiveSpeakerDetectionConfig,
@@ -207,6 +267,7 @@ def process_responses(
 
     frame_detections: dict[int, list[dict]] = {}
     config_received = False
+    service_info_received = False
 
     pbar = tqdm(
         desc="Receiving results",
@@ -217,6 +278,12 @@ def process_responses(
 
     try:
         for response in response_iter:
+            if response.HasField("service_info"):
+                if not service_info_received:
+                    print_service_info(response.service_info)
+                    service_info_received = True
+                continue
+
             if response.HasField("config") or response.HasField("keepalive"):
                 if response.HasField("config") and not config_received:
                     print("\nReceived configuration acknowledgment from server")
@@ -460,9 +527,11 @@ def main():
     if args.preview_mode:
         print("Preview mode: Enabled")
         print(f"Function ID : {args.function_id}")
+    if args.client_session_id:
+        print(f"Session ID  : {args.client_session_id}")
     print("=" * 60 + "\n")
 
-    request_metadata = create_request_metadata(args)
+    request_metadata = build_request_metadata(args)
 
     try:
         if args.ssl_mode != "DISABLED":

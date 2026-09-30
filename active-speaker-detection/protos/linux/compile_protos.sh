@@ -58,6 +58,7 @@ python3 -m grpc_tools.protoc \
     --grpc_python_out="$OUTPUT_DIR" \
     "$PROTOS_DIR/nvidia/ai4m/audio/v1/audio.proto" \
     "$PROTOS_DIR/nvidia/ai4m/common/v1/common.proto" \
+    "$PROTOS_DIR/nvidia/ai4m/common/v1/service_info.proto" \
     "$PROTOS_DIR/nvidia/ai4m/video/v1/video.proto" \
     "$PROTOS_DIR/nvidia/ai4m/activespeakerdetection/v1/activespeakerdetection.proto"
 

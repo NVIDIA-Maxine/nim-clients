@@ -30,6 +30,7 @@ import pathlib
 # Importing gRPC compiler auto-generated active speaker detection library
 SCRIPT_PATH = str(pathlib.Path(__file__).parent.resolve())
 sys.path.append(os.path.join(SCRIPT_PATH, "../interfaces"))
+from nvidia.ai4m.activespeakerdetection.v1 import activespeakerdetection_pb2  # noqa: E402
 from nvidia.ai4m.audio.v1 import audio_pb2  # noqa: E402
 from nvidia.ai4m.video.v1 import video_pb2  # noqa: E402
 
@@ -52,4 +53,13 @@ AUDIO_ENCODING_CONFIGS = {
 # Video codec configurations
 VIDEO_CODEC_CONFIGS = {
     "h264": video_pb2.VIDEO_CODEC_H264,
+}
+
+# Voice-activity smoothing levels. Maps the CLI choice to the proto enum value.
+# Omitting the option leaves the field unset (UNSPECIFIED), so the deployment
+# default from NV_AI4M_ASD_VA_SMOOTHING is used.
+VOICE_ACTIVITY_SMOOTHING_CONFIGS = {
+    "off": activespeakerdetection_pb2.VOICE_ACTIVITY_SMOOTHING_OFF,
+    "low": activespeakerdetection_pb2.VOICE_ACTIVITY_SMOOTHING_LOW,
+    "high": activespeakerdetection_pb2.VOICE_ACTIVITY_SMOOTHING_HIGH,
 }
