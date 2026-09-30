@@ -23,6 +23,7 @@ import os
 import csv
 import itertools
 from typing import Iterator, List, Union
+from urllib.parse import urlsplit
 import argparse
 import grpc
 from google.protobuf import any_pb2, wrappers_pb2
@@ -79,8 +80,7 @@ def add_preview_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--preview-mode",
         action="store_true",
-        help="Flag to send request to preview NVCF NIM server on "
-        "https://build.nvidia.com/nvidia/eyecontact/api. ",
+        help="Flag to send request to the preview NVCF-hosted NIM on build.nvidia.com.",
     )
     parser.add_argument(
         "--api-key",
@@ -93,6 +93,87 @@ def add_preview_arguments(parser: argparse.ArgumentParser) -> None:
         type=str,
         help="NVCF function ID for the service, utilized when using TRY API " "ignored otherwise",
     )
+
+
+def add_presigned_arguments(parser: argparse.ArgumentParser) -> None:
+    """Add pre-signed URL (S3 ingest) arguments to an argument parser.
+
+    These are shared across NIM clients that support pre-signed URL ingest,
+    mirroring add_ssl_arguments / add_preview_arguments. When --presigned-url
+    is set, the client sends a single pre-signed URL request instead of
+    streaming input bytes; the NIM downloads, validates, and analyzes the
+    object. All server-side validation (HTTPS, host allowlist, expiry, SSRF,
+    checksum, size, etc.) is enforced by the NIM, so the client only passes
+    these fields through.
+
+    Args:
+        parser: The argument parser to add pre-signed URL arguments to
+    """
+    presigned = parser.add_argument_group("pre-signed URL ingest (S3)")
+    presigned.add_argument(
+        "--presigned-url",
+        type=str,
+        default=None,
+        help="Pre-signed (or direct) HTTPS URL to the input object. When set, "
+        "the client sends a single pre-signed URL request instead of streaming "
+        "a local file. Mutually exclusive with the file-input argument.",
+    )
+    presigned.add_argument(
+        "--presigned-url-provider",
+        choices=["unspecified", "s3"],
+        default="unspecified",
+        help="Provider hint; 's3' enables SigV4 URL-shape validation server-side.",
+    )
+    presigned.add_argument(
+        "--presigned-checksum-type",
+        choices=["md5", "sha256", "sha512"],
+        default="sha256",
+        help="Checksum algorithm for --presigned-checksum.",
+    )
+    presigned.add_argument(
+        "--presigned-checksum",
+        type=str,
+        default=None,
+        help="Expected lowercase hex checksum digest of the downloaded file.",
+    )
+    presigned.add_argument(
+        "--presigned-no-verify-checksum",
+        action="store_true",
+        help="Set verify_checksum=false so the server skips checksum "
+        "verification (otherwise the server requires a checksum).",
+    )
+    presigned.add_argument(
+        "--presigned-expected-size",
+        type=int,
+        default=None,
+        help="Expected Content-Length in bytes (verified by the server).",
+    )
+    presigned.add_argument(
+        "--presigned-content-type",
+        type=str,
+        default=None,
+        help="Expected Content-Type, e.g. video/mp4 (verified by the server).",
+    )
+    presigned.add_argument(
+        "--presigned-expires-at-unix-ms",
+        type=int,
+        default=None,
+        help="Client assertion of URL expiry, in Unix epoch milliseconds.",
+    )
+
+
+def redact_url(url: str) -> str:
+    """Return a log-safe URL: scheme://host/path with the query dropped.
+
+    Args:
+        url: The (possibly credential-bearing) URL to redact.
+
+    Returns:
+        The URL with its query string removed so signed credentials are not
+        printed to logs.
+    """
+    parts = urlsplit(url)
+    return f"{parts.scheme}://{parts.hostname or ''}{parts.path}"
 
 
 def validate_ssl_args(args: argparse.Namespace) -> None:
@@ -112,6 +193,18 @@ def validate_ssl_args(args: argparse.Namespace) -> None:
     elif args.ssl_mode == "TLS":
         if not args.ssl_root_cert:
             raise RuntimeError("If --ssl-mode is TLS, --ssl-root-cert is required.")
+
+    # Check the files before the channel reads them: otherwise a missing cert
+    # surfaces as a bare "[Errno 2]" that names neither the flag nor the fix.
+    needed = {"MTLS": ("ssl_root_cert", "ssl_cert", "ssl_key"), "TLS": ("ssl_root_cert",)}
+    for name in needed.get(args.ssl_mode, ()):
+        path = getattr(args, name)
+        if not os.path.isfile(path):
+            raise RuntimeError(
+                f"--{name.replace('_', '-')} file not found: {path}. Generate the "
+                "certificates with the SSL recipe in the NIM documentation, or pass "
+                "the path of an existing file."
+            )
 
 
 def validate_preview_args(args: argparse.Namespace) -> None:
@@ -155,6 +248,9 @@ def is_file_available(file_path: os.PathLike, file_types: List[str]) -> bool:
     """
     if not os.path.isfile(file_path):
         raise FileNotFoundError(f"File '{file_path}' not found")
+    # An empty file is caught here rather than at the server.
+    if os.path.getsize(file_path) == 0:
+        raise RuntimeError(f"File '{file_path}' is empty")
     for file_type in file_types:
         if os.path.splitext(file_path)[1].lower() == f".{file_type}":
             return True
