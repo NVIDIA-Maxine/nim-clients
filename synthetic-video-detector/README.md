@@ -1,229 +1,74 @@
-
 # NVIDIA Synthetic Video Detector NIM Client
 
-This package provides a sample client that demonstrates interaction with the NVIDIA Synthetic Video Detector NIM. The client allows you to analyze video files to detect whether they are synthetic/fake or real.
+This folder contains the sample Python clients for the NVIDIA Synthetic Video Detector NIM, which analyzes video files to detect whether they are synthetic (AI-generated) or real.
 
-The detector is designed to **identify synthetic (AI-generated) videos**. The default classification threshold is set conservatively to minimize the chance of missing any synthetic video. You can adjust the classification threshold to suit your use case (see [Threshold and use cases](#threshold-and-use-cases)).
+Two client versions are provided because the NIM ships in two mutually incompatible gRPC API generations:
 
-## Getting Started
+| Client | gRPC API | Use it for |
+|--------|----------|------------|
+| [v1](docs/v1.md) | `nvidia.maxine.syntheticvideodetector.v1` | The NVCF-hosted [Try API](https://build.nvidia.com/nvidia/synthetic-video-detector/api) and v1 self-hosted servers. Supports `--preview-mode` (NVCF). |
+| [v2](docs/v2.md) | `nvidia.ai4m.syntheticvideodetector.v1` | A v2 self-hosted NIM. Supports self-hosted gRPC (insecure/SSL) plus pre-signed S3 URL ingest. No NVCF/Try API. |
 
-NVIDIA AI4M NIM Client packages use gRPC APIs. The following instructions demonstrate the Synthetic Video Detector NIM by using a Python client.
-To experience the NVIDIA Synthetic Video Detector NIM API without having to host your own servers, use the [Try API](https://build.nvidia.com/nvidia/synthetic-video-detector/api) feature, which uses the NVIDIA Cloud Function backend.
+The two APIs are **not cross-compatible**. Pointing a client at the wrong server generation fails fast with a gRPC `UNIMPLEMENTED` error and a message telling you which client to use.
 
-## Prerequisites
+## Folder layout
 
-- Access to NVIDIA Synthetic Video Detector NIM container and service.
-- The NIM supports MP4 input files with H.264 video codec (audio optional).
-- Videos with Variable Frame Rate (VFR) are not supported.
-- Ensure that you have Python 3.10 or later installed on your system. For download and installation instructions, see [Download Python](https://www.python.org/downloads/).
-
-## Usage Guide
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/nvidia-maxine/nim-clients.git
-
-# Go to the 'synthetic-video-detector' folder
-cd nim-clients/synthetic-video-detector/
+```
+synthetic-video-detector/
+  assets/                  # sample videos shared by both clients
+  requirements.txt         # shared Python dependencies
+  LICENSE.md               # shared license
+  docs/
+    v1.md                  # v1 usage guide
+    v2.md                  # v2 usage guide
+  protos/                  # both API generations, split by namespace
+    proto/nvidia/maxine/   # v1 API
+    proto/nvidia/ai4m/     # v2 API (service + shared ingest proto)
+    linux/                 # compile_protos.sh (compiles both)
+    windows/               # compile_protos.bat (compiles both)
+  interfaces/              # generated stubs, mirroring the proto packages
+    nvidia/maxine/syntheticvideodetector/v1/
+    nvidia/ai4m/syntheticvideodetector/v1/
+    nvidia/ai4m/ingest/v1/
+  scripts/
+    v1/                    # v1 client
+    v2/                    # v2 client
+  notebook/
+    v1/                    # v1 notebook
+    v2/                    # v2 notebook
 ```
 
-### 2. Install Dependencies
+`assets/`, `requirements.txt`, `LICENSE.md`, `protos/`, and `interfaces/` are shared; only the client code under `scripts/` and `notebook/` is version-specific.
+
+Because each generation lives in its own protobuf package (`nvidia.maxine` vs `nvidia.ai4m`), the generated stubs sit in separate Python packages under a single `interfaces/` tree and never collide. Each client imports the generation it targets explicitly, for example:
+
+```python
+# v1 client
+from nvidia.maxine.syntheticvideodetector.v1 import syntheticvideodetector_pb2
+
+# v2 client
+from nvidia.ai4m.syntheticvideodetector.v1 import syntheticvideodetector_pb2
+```
+
+## Quick start
+
+Install the shared dependencies once from this folder, then run the client for your server generation:
 
 ```bash
-# Install all the required packages using requirements.txt file
+# from this folder
 pip install -r requirements.txt
+
+# v2 self-hosted server
+cd scripts/v2
+python3 synthetic-video-detector.py --target <server_ip:port>
+
+# or the v1 / NVCF Try API client
+cd scripts/v1
+python3 synthetic-video-detector.py --target <server_ip:port>
 ```
 
-### 3. Compile the Protos (optional)
-
-If you want to use the client code provided in the GitHub client repository, you can skip this step.
-
-The proto files are available in the `synthetic-video-detector/protos` folder. You can compile them to generate client interfaces in your preferred programming language. For more details, refer to [Supported languages](https://grpc.io/docs/languages/) in the gRPC documentation.
-
-The following example shows how to compile the protos for Python on Linux and Windows.
-
-#### Python
-
-The `grpcio` version needed for compilation can be referred at `requirements.txt`
-
-**To compile protos on Linux:**
-```bash
-# Go to synthetic-video-detector/protos/linux/ folder
-cd synthetic-video-detector/protos/linux/
-
-chmod +x compile_protos.sh
-./compile_protos.sh
-```
-
-**To compile protos on Windows:**
-```bash
-# Go to synthetic-video-detector/protos/windows/ folder
-cd synthetic-video-detector/protos/windows/
-
-./compile_protos.bat
-```
-
-The compiled proto files appear in the `nim-clients/synthetic-video-detector/interfaces` directory.
-
-### 4. Host the NIM Server
-
-Before running the client part of Synthetic Video Detector, set up a server. 
-The simplest way to do that is to follow the [quick start guide](https://docs.nvidia.com/nim/maxine/synthetic-video-detector/latest/index.html) in the documentation for setting up the Synthetic Video Detector NIM. This step can be skipped when using [Try API](https://build.nvidia.com/nvidia/synthetic-video-detector/api).
-
-### 5. Run the Python Client
-
-Go to the `scripts` directory:
-
-```bash
-cd scripts
-```
-
-#### Basic Usage
-
-```bash
-python3 synthetic-video-detector.py \
-  --target <server_ip:port> \
-  --video-input <input_video_file_path> \
-  --save-csv [filename]
-```
-
-Running the Python client script with no arguments uses the default arguments. All arguments are listed in the [Command-Line Arguments](#command-line-arguments) table below.
-
-#### Command-Line Arguments
-
-| Argument | Default Value | Required? | Description |
-|----------|---------------|-----------|-------------|
-| `-h, --help` | n/a | Optional | Show help message and exit. |
-| `--ssl-mode` | `DISABLED` | Optional | SSL mode (`DISABLED`, `MTLS`, or `TLS`). |
-| `--ssl-key` | `../ssl_key/ssl_key_client.pem` | Optional | Path to SSL private key. Required if ssl-mode is `MTLS`. |
-| `--ssl-cert` | `../ssl_key/ssl_cert_client.pem` | Optional | Path to SSL certificate chain. Required if ssl-mode is `MTLS`. |
-| `--ssl-root-cert` | `../ssl_key/ssl_ca_cert.pem` | Optional | Path to SSL root certificate. Required if ssl-mode is `MTLS` or `TLS`. |
-| `--target` | `127.0.0.1:8001` | Optional | IP:port of gRPC service, when hosted locally. Use `grpc.nvcf.nvidia.com:443` when hosted on NVCF. |
-| `--preview-mode` | `False` | Optional | Flag to send request to preview NVCF NIM server. Utilized when using TRY API. |
-| `--api-key` | n/a | Optional* | NGC API key required for authentication. Required when using `--preview-mode`, ignored otherwise. |
-| `--function-id` | n/a | Optional* | NVCF function ID for the service. Required when using `--preview-mode`, ignored otherwise. |
-| `--video-input` | `../assets/fake_sample_video.mp4` | Optional | Path to input video file to analyze (supports MP4 only). |
-| `--save-csv` | `False` | Optional | Save results to CSV. Optionally specify a custom filename (e.g., `--save-csv results.csv`), otherwise uses the input video's base name (e.g., `video.mp4` → `video.csv`). |
-
-### 6. Understanding the Results
-
-The Synthetic Video Detector analyzes videos by processing them per frame and provides the following output:
-
-#### Console Output
-
-The client displays:
-- **Final statistics**:
-  - Total frames processed
-  - Final probability (0.0 to 1.0, where >0.3 indicates synthetic/fake)
-- **Verdict**: SYNTHETIC/FAKE or REAL with confidence percentage
-
-#### CSV Output
-
-When requested with `--save-csv`, a CSV is generated containing:
-- **index**: Frame index
-- **probability**: Per-frame probability computed from the model logit using a sigmoid transform
-
-The CSV format allows for detailed analysis of detection results across the entire video.
-
-#### Threshold and use cases
-
-The default classification threshold is **0.3**. This value is intentionally conservative to minimize the chance of missing any synthetic video. With this threshold, some authentic videos (for example, poorly lit or atypical footage) may be flagged as synthetic.
-
-| Threshold | Behavior | Recommended Use Case |
-|-----------|----------|----------------------|
-| **0.3** (default) | Conservative -- prioritizes catching all synthetic content. May produce more false positives on authentic videos. | High-stakes screening where missing a synthetic video is unacceptable. |
-| **0.5** (balanced) | Balanced -- provides equal weight to correctly identifying both synthetic and authentic content. | General-purpose classification where both false positives and false negatives should be minimized. |
-
-Adjust the threshold according to your use case. You can modify the `CLASSIFICATION_THRESHOLD` value in `scripts/constants.py` based on your requirements.
-
-### 7. Interactive Notebook
-
-For an interactive experience with visualization capabilities, use the provided Jupyter notebook:
-
-```bash
-cd notebook
-jupyter notebook synthetic_video_detector_notebook.ipynb
-```
-
-The notebook provides:
-- Interactive video analysis
-- **Probability vs Time graphs** with threshold lines
-- **Distribution histograms** of detection scores
-- Customizable thresholds
-- CSV export capabilities
-
-The visualization helps you understand:
-- How detection scores vary across the video?
-- Whether the video is consistently synthetic/real or has mixed regions
-- The distribution of confidence scores
-
-### 8. Examples
-
-- Get help on all available options:
-  ```bash
-  python3 synthetic-video-detector.py -h
-  ```
-
-- Run with default settings (uses default video path):
-  ```bash
-  python3 synthetic-video-detector.py --target 127.0.0.1:8001
-  ```
-
-- Analyze a specific video file:
-  ```bash
-  python3 synthetic-video-detector.py --target 127.0.0.1:8001 --video-input /path/to/video.mp4
-  ```
-
-- Save CSV results with auto-generated filename (uses input video's base name, e.g., video.csv):
-  ```bash
-  python3 synthetic-video-detector.py --target 127.0.0.1:8001 --video-input /path/to/video.mp4 --save-csv
-  ```
-
-- Save CSV results with custom filename:
-  ```bash
-  python3 synthetic-video-detector.py --target 127.0.0.1:8001 --video-input /path/to/video.mp4 --save-csv results.csv
-  ```
-
-- Run with SSL TLS security enabled:
-  ```bash
-  python3 synthetic-video-detector.py --target 127.0.0.1:8001 --ssl-mode TLS --ssl-root-cert ../ssl_key/ssl_ca.crt
-  ```
-
-- Run with SSL mutual TLS (mTLS) authentication:
-  ```bash
-  python3 synthetic-video-detector.py --target 127.0.0.1:8001 --ssl-mode MTLS --ssl-key ../ssl_key/ssl_client.key --ssl-cert ../ssl_key/ssl_client.crt --ssl-root-cert ../ssl_key/ssl_ca.crt
-  ```
-
-- Run with preview mode (NVCF cloud testing):
-  ```bash
-  python3 synthetic-video-detector.py --preview-mode --api-key <your-ngc-api-key> --function-id <function-id> --target grpc.nvcf.nvidia.com:443 --video-input /path/to/video.mp4
-  ```
-
-### 8. Important Usage Notes
-
-#### Supported Formats
-
-| Format Type | Supported Formats | Notes |
-|-------------|-------------------|-------|
-| **Video Input** | MP4 | Only MP4 (H264 codec) video format is supported. |
-
-#### How It Works
-
-1. **Upload**: The client uploads the video file to the NIM service in chunks (default 1MB per chunk)
-2. **Processing**: The service analyzes the video by:
-   - Extracting and processing video frames
-   - Running the DINO-based deep learning model on each frame
-   - Computing per-frame detection scores (logits)
-3. **Response**: The service streams back:
-   - Per-frame results as they are processed
-   - Keep-alive messages during processing
-   - Final aggregated results
-4. **Output**: The client displays:
-   - Final verdict (SYNTHETIC/FAKE or REAL)
-   - Optional detailed CSV results
+See [docs/v1.md](docs/v1.md) and [docs/v2.md](docs/v2.md) for the full usage guides, command-line arguments, and examples.
 
 ## License
 
 See [LICENSE.md](LICENSE.md) for license information.
-

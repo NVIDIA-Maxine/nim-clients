@@ -1,0 +1,105 @@
+// SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION &
+// AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: MIT
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+// and/or sell copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+
+// Common, media-agnostic ingest object for injecting an input file into an
+// AI4M NIM by a pre-signed HTTPS GET URL instead of streaming the bytes
+// through the request stream. Shared across NIM client packages.
+
+syntax = "proto3";
+
+package nvidia.ai4m.ingest.v1;
+
+// Optional provider hint used to enable provider-specific validation.
+enum UrlProvider {
+  // Default. Apply common provider-neutral pre-signed URL validation only.
+  URL_PROVIDER_UNSPECIFIED = 0;
+
+  // Apply common validation plus S3 SigV4 URL-shape, credential-scope,
+  // signed-header, and expiry validation. S3 performs the cryptographic
+  // signature verification when the GET request is authorized.
+  URL_PROVIDER_S3 = 1;
+}
+
+// Identifies the checksum algorithm and therefore which hex value must be set.
+enum ChecksumType {
+  CHECKSUM_TYPE_UNSPECIFIED = 0;
+  CHECKSUM_TYPE_MD5 = 1;
+  CHECKSUM_TYPE_SHA256 = 2;
+  CHECKSUM_TYPE_SHA512 = 3;
+}
+
+// Expected checksum for the downloaded file bytes.
+message FileChecksum {
+  // Required and non-UNSPECIFIED when this message is present.
+  ChecksumType type = 1;
+
+  // Required. Exactly one value must be set and it must match type.
+  oneof hex_value {
+    // Lowercase, 32-character hexadecimal MD5 digest. SHA-256 remains the
+    // recommended default.
+    string md5_hex = 2;
+
+    // Lowercase, 64-character hexadecimal SHA-256 digest.
+    string sha256_hex = 3;
+
+    // Lowercase, 128-character hexadecimal SHA-512 digest.
+    string sha512_hex = 4;
+  }
+}
+
+// Placeholder for future provider-specific parameters constructed inside the
+// container. Defined and reserved now so field 8 of PresignedUrl stays stable
+// as provider-specific options are added.
+message ProviderSpecificParams {
+}
+
+// A file made available to the NIM through a pre-signed HTTPS GET URL. This
+// message is media-agnostic and does not modify any video proto.
+message PresignedUrl {
+  // Required. Absolute HTTPS pre-signed GET URL.
+  string url = 1;
+
+  // Conditionally required. Required when effective verify_checksum is true;
+  // must be absent when effective verify_checksum is false.
+  optional FileChecksum checksum = 2;
+
+  // Optional with presence. If absent, the server treats this as true.
+  optional bool verify_checksum = 3;
+
+  // Optional expected file size. When present, it must match the downloaded
+  // byte count and the Content-Length when the response includes that header.
+  optional uint64 expected_content_length_bytes = 4;
+
+  // Optional expected response Content-Type. Header assertion only, e.g.
+  // "video/mp4".
+  optional string content_type = 5;
+
+  // Optional client assertion for URL expiry, in Unix epoch milliseconds.
+  optional uint64 expires_at_unix_ms = 6;
+
+  // Optional. If absent or UNSPECIFIED, only common URL validation is applied.
+  // If S3, S3 SigV4 validation is additionally applied by parsing the URL.
+  optional UrlProvider url_provider = 7;
+
+  // Optional provider-specific parameters (reserved for future use).
+  ProviderSpecificParams provider_specific_params = 8;
+}

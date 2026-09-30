@@ -25,6 +25,7 @@ This script provides the following functionality:
 - Parse command-line arguments for configuring LipSync.
 - Set up gRPC communication with the LipSync service.
 - Send video, audio, and speaker data to the service.
+- Advertise a client-assigned session id for log correlation.
 - Process responses and write output video files.
 
 The script supports various SSL modes for secure communication and handles
@@ -35,6 +36,7 @@ import json
 import os
 import sys
 import time
+import uuid
 import grpc
 from typing import Iterator
 import pathlib
@@ -63,6 +65,10 @@ import nvidia.ai4m.lipsync.v1.lipsync_pb2_grpc as lipsync_pb2_grpc  # noqa: E402
 import nvidia.ai4m.video.v1.video_pb2 as video_pb2  # noqa: E402
 import nvidia.ai4m.audio.v1.audio_pb2 as audio_pb2  # noqa: E402
 import nvidia.ai4m.common.v1.common_pb2 as common_pb2  # noqa: E402
+
+# gRPC metadata key the service reads the client-assigned session id from;
+# matches the server's default NV_AI4M_SESSION_ID_METADATA_KEY.
+SESSION_ID_METADATA_KEY = "client-session-id"
 
 
 def create_custom_encoding_params(params: dict) -> video_pb2.CustomEncodingParams:
@@ -353,6 +359,17 @@ def write_output_file_from_response(
 
         try:
             for response in response_iter:
+                # Check for one-shot service info banner
+                if response.HasField("service_info"):
+                    info = response.service_info
+                    print(
+                        f"\nServiceInfo: feature={info.feature_name} "
+                        f"version={info.feature_version} model={info.model_info} "
+                        f"server_request_id={info.server_request_id} "
+                        f"client_session_id={info.client_session_id}"
+                    )
+                    continue
+
                 if response.HasField("video_file_data"):
                     chunk_data = response.video_file_data
                     fd.write(chunk_data)
@@ -368,15 +385,67 @@ def write_output_file_from_response(
     print(f"Completed: Received {chunk_count} chunks ({total_bytes / (1024*1024):.1f} MB total)")
 
 
+def resolve_client_session_id(requested_session_id: str | None) -> str:
+    """Resolve the session id to advertise for this run.
+
+    Args:
+        requested_session_id: Value of ``--client-session-id``; ``None`` when the
+            flag was omitted, an empty string to opt out of sending one.
+
+    Returns:
+        The session id to send, or an empty string to send none.
+    """
+    if requested_session_id is None:
+        return str(uuid.uuid4())
+    return requested_session_id
+
+
+def build_invocation_metadata(client_session_id: str) -> tuple[tuple[str, str], ...]:
+    """Build the gRPC metadata carrying the client-assigned session id.
+
+    Args:
+        client_session_id: Session id to advertise; empty to send no metadata
+
+    Returns:
+        Metadata pairs for the stub call, empty when no session id is set
+    """
+    if not client_session_id:
+        return ()
+    return ((SESSION_ID_METADATA_KEY, client_session_id),)
+
+
+def discard_partial_output(output_filepath: os.PathLike) -> None:
+    """Remove a half-written output file so a failed run leaves nothing playable behind.
+
+    The server can fail partway through a stream, by which point the client has already
+    written every chunk it received. What is left decodes cleanly but is silently
+    truncated, which is easy to mistake for a successful run.
+
+    Args:
+        output_filepath: Path the failed run was writing to
+    """
+    try:
+        os.remove(output_filepath)
+    except FileNotFoundError:
+        return
+    except OSError as e:
+        print(f"Could not remove partial output file {output_filepath}: {e}")
+        return
+    print(f"Removed partial output file {output_filepath}")
+
+
 def process_request(
     channel: grpc.Channel,
     lipsync_config: LipSyncConfig,
+    client_session_id: str = "",
 ) -> None:
     """Process gRPC request and handle responses.
 
     Args:
         channel: gRPC channel for server client communication
         lipsync_config: Configuration for the LipSync service
+        client_session_id: Session id to send as gRPC metadata, which the server
+            echoes back in the ServiceInfo banner. Empty to send none.
 
     Raises:
         Exception: If any errors occur during processing
@@ -385,8 +454,12 @@ def process_request(
         stub = lipsync_pb2_grpc.LipSyncServiceStub(channel)
         start_time = time.time()
 
-        responses = stub.Lipsync(generate_request_for_inference(lipsync_config=lipsync_config))
-        next(responses)
+        responses = stub.Lipsync(
+            generate_request_for_inference(lipsync_config=lipsync_config),
+            metadata=build_invocation_metadata(client_session_id),
+        )
+        # The response stream opens with the ServiceInfo banner followed by the
+        # config echo; both are handled while writing the output file.
         write_output_file_from_response(
             response_iter=responses, output_filepath=lipsync_config.output_filepath
         )
@@ -394,10 +467,11 @@ def process_request(
         print(f"Function invocation completed in {end_time-start_time:.2f}s")
     except Exception as e:
         print(f"An error occurred: {e}")
+        discard_partial_output(lipsync_config.output_filepath)
         raise e
 
 
-def main():
+def main() -> int:
     """Main entry point for the LipSync client.
 
     Handles:
@@ -405,23 +479,39 @@ def main():
     2. Configuration validation
     3. Channel setup (secure/insecure)
     4. Request processing
+
+    Returns:
+        Process exit status: 0 on success, 1 when the run was rejected before it started
     """
     args = parse_args()
-    lipsync_config = LipSyncConfig.from_args(args)
 
+    # Building the config parses --custom-encoding-params, so it can fail on bad
+    # input the same way validation can and belongs under the same handler.
     try:
+        lipsync_config = LipSyncConfig.from_args(args)
         lipsync_config.validate_lipsync_config()
     except Exception as e:
         print(f"Invalid configuration: {e}")
-        return
+        return 1
     print(lipsync_config)
 
+    # The session id is transport metadata rather than an inference parameter,
+    # so it is threaded through the call instead of carried on LipSyncConfig.
+    client_session_id = resolve_client_session_id(args.client_session_id)
+    if client_session_id:
+        print(f"Client session id: {client_session_id}")
+
     if args.ssl_mode != "DISABLED":
-        channel_credentials = create_channel_credentials(args)
+        try:
+            channel_credentials = create_channel_credentials(args)
+        except Exception as e:
+            print(f"Invalid SSL configuration: {e}")
+            return 1
         with grpc.secure_channel(target=args.target, credentials=channel_credentials) as channel:
             process_request(
                 channel=channel,
                 lipsync_config=lipsync_config,
+                client_session_id=client_session_id,
             )
     else:
         print(f"Establishing insecure channel to {args.target}")
@@ -429,8 +519,10 @@ def main():
             process_request(
                 channel=channel,
                 lipsync_config=lipsync_config,
+                client_session_id=client_session_id,
             )
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

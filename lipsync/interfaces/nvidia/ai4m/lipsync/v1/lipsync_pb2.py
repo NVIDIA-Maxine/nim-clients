@@ -25,34 +25,35 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 from nvidia.ai4m.audio.v1 import audio_pb2 as nvidia_dot_ai4m_dot_audio_dot_v1_dot_audio__pb2
 from nvidia.ai4m.common.v1 import common_pb2 as nvidia_dot_ai4m_dot_common_dot_v1_dot_common__pb2
+from nvidia.ai4m.common.v1 import service_info_pb2 as nvidia_dot_ai4m_dot_common_dot_v1_dot_service__info__pb2
 from nvidia.ai4m.video.v1 import video_pb2 as nvidia_dot_ai4m_dot_video_dot_v1_dot_video__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n$nvidia/ai4m/lipsync/v1/lipsync.proto\x12\x16nvidia.ai4m.lipsync.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a nvidia/ai4m/audio/v1/audio.proto\x1a\"nvidia/ai4m/common/v1/common.proto\x1a nvidia/ai4m/video/v1/video.proto\"\xdb\x01\n\x15\x42\x61\x63kgroundAudioConfig\x12)\n\x1cis_background_audio_provided\x18\x01 \x01(\x08H\x00\x88\x01\x01\x12:\n\x0b\x61udio_codec\x18\x02 \x01(\x0e\x32 .nvidia.ai4m.audio.v1.AudioCodecH\x01\x88\x01\x01\x12\x19\n\x0c\x61udio_volume\x18\x03 \x01(\x02H\x02\x88\x01\x01\x42\x1f\n\x1d_is_background_audio_providedB\x0e\n\x0c_audio_codecB\x0f\n\r_audio_volume\"\x9a\x05\n\rLipsyncConfig\x12;\n\x11input_audio_codec\x18\x01 \x01(\x0e\x32 .nvidia.ai4m.audio.v1.AudioCodec\x12%\n\x18is_speaker_info_provided\x18\x02 \x01(\x08H\x00\x88\x01\x01\x12>\n\x0c\x65xtend_audio\x18\x03 \x01(\x0e\x32#.nvidia.ai4m.lipsync.v1.ExtendAudioH\x01\x88\x01\x01\x12>\n\x0c\x65xtend_video\x18\x04 \x01(\x0e\x32#.nvidia.ai4m.lipsync.v1.ExtendVideoH\x02\x88\x01\x01\x12G\n\x15output_video_encoding\x18\x05 \x01(\x0b\x32#.nvidia.ai4m.video.v1.VideoEncodingH\x03\x88\x01\x01\x12\x41\n\x12output_audio_codec\x18\x06 \x01(\x0e\x32 .nvidia.ai4m.audio.v1.AudioCodecH\x04\x88\x01\x01\x12 \n\x13head_movement_speed\x18\x07 \x01(\rH\x05\x88\x01\x01\x12S\n\x17\x62\x61\x63kground_audio_config\x18\x08 \x01(\x0b\x32-.nvidia.ai4m.lipsync.v1.BackgroundAudioConfigH\x06\x88\x01\x01\x42\x1b\n\x19_is_speaker_info_providedB\x0f\n\r_extend_audioB\x0f\n\r_extend_videoB\x18\n\x16_output_video_encodingB\x15\n\x13_output_audio_codecB\x16\n\x14_head_movement_speedB\x1a\n\x18_background_audio_config\"\x99\x01\n\x0bSpeakerInfo\x12\x38\n\x0cspeaker_bbox\x18\x01 \x01(\x0b\x32\".nvidia.ai4m.common.v1.BoundingBox\x12\x17\n\nspeaker_id\x18\x02 \x01(\x05H\x00\x88\x01\x01\x12\x18\n\x0bis_speaking\x18\x03 \x01(\x08H\x01\x88\x01\x01\x42\r\n\x0b_speaker_idB\x0e\n\x0c_is_speaking\"\x83\x01\n\x13SpeakerInfoPerFrame\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\r\x12:\n\rspeaker_infos\x18\x02 \x03(\x0b\x32#.nvidia.ai4m.lipsync.v1.SpeakerInfo\x12\x13\n\x06\x62ypass\x18\x03 \x01(\x08H\x00\x88\x01\x01\x42\t\n\x07_bypass\"\x8c\x02\n\x10LipsyncInputData\x12\x1c\n\x0fvideo_file_data\x18\x01 \x01(\x0cH\x00\x88\x01\x01\x12\x1c\n\x0f\x61udio_file_data\x18\x02 \x01(\x0cH\x01\x88\x01\x01\x12L\n\x17per_frame_speaker_infos\x18\x03 \x03(\x0b\x32+.nvidia.ai4m.lipsync.v1.SpeakerInfoPerFrame\x12\'\n\x1a\x62\x61\x63kground_audio_file_data\x18\x04 \x01(\x0cH\x02\x88\x01\x01\x42\x12\n\x10_video_file_dataB\x12\n\x10_audio_file_dataB\x1d\n\x1b_background_audio_file_data\"\x97\x01\n\x0eLipsyncRequest\x12\x37\n\x06\x63onfig\x18\x01 \x01(\x0b\x32%.nvidia.ai4m.lipsync.v1.LipsyncConfigH\x00\x12\x39\n\x05input\x18\x02 \x01(\x0b\x32(.nvidia.ai4m.lipsync.v1.LipsyncInputDataH\x00\x42\x11\n\x0flipsync_request\"\xa6\x01\n\x0fLipsyncResponse\x12\x37\n\x06\x63onfig\x18\x01 \x01(\x0b\x32%.nvidia.ai4m.lipsync.v1.LipsyncConfigH\x00\x12\x19\n\x0fvideo_file_data\x18\x02 \x01(\x0cH\x00\x12+\n\tkeepalive\x18\x03 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x42\x12\n\x10lipsync_response*E\n\x0b\x45xtendAudio\x12\x1c\n\x18\x45XTEND_AUDIO_UNSPECIFIED\x10\x00\x12\x18\n\x14\x45XTEND_AUDIO_SILENCE\x10\x01*_\n\x0b\x45xtendVideo\x12\x1c\n\x18\x45XTEND_VIDEO_UNSPECIFIED\x10\x00\x12\x18\n\x14\x45XTEND_VIDEO_FORWARD\x10\x01\x12\x18\n\x14\x45XTEND_VIDEO_REVERSE\x10\x02\x32r\n\x0eLipSyncService\x12`\n\x07Lipsync\x12&.nvidia.ai4m.lipsync.v1.LipsyncRequest\x1a\'.nvidia.ai4m.lipsync.v1.LipsyncResponse\"\x00(\x01\x30\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n$nvidia/ai4m/lipsync/v1/lipsync.proto\x12\x16nvidia.ai4m.lipsync.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a nvidia/ai4m/audio/v1/audio.proto\x1a\"nvidia/ai4m/common/v1/common.proto\x1a(nvidia/ai4m/common/v1/service_info.proto\x1a nvidia/ai4m/video/v1/video.proto\"\xdb\x01\n\x15\x42\x61\x63kgroundAudioConfig\x12)\n\x1cis_background_audio_provided\x18\x01 \x01(\x08H\x00\x88\x01\x01\x12:\n\x0b\x61udio_codec\x18\x02 \x01(\x0e\x32 .nvidia.ai4m.audio.v1.AudioCodecH\x01\x88\x01\x01\x12\x19\n\x0c\x61udio_volume\x18\x03 \x01(\x02H\x02\x88\x01\x01\x42\x1f\n\x1d_is_background_audio_providedB\x0e\n\x0c_audio_codecB\x0f\n\r_audio_volume\"\x9a\x05\n\rLipsyncConfig\x12;\n\x11input_audio_codec\x18\x01 \x01(\x0e\x32 .nvidia.ai4m.audio.v1.AudioCodec\x12%\n\x18is_speaker_info_provided\x18\x02 \x01(\x08H\x00\x88\x01\x01\x12>\n\x0c\x65xtend_audio\x18\x03 \x01(\x0e\x32#.nvidia.ai4m.lipsync.v1.ExtendAudioH\x01\x88\x01\x01\x12>\n\x0c\x65xtend_video\x18\x04 \x01(\x0e\x32#.nvidia.ai4m.lipsync.v1.ExtendVideoH\x02\x88\x01\x01\x12G\n\x15output_video_encoding\x18\x05 \x01(\x0b\x32#.nvidia.ai4m.video.v1.VideoEncodingH\x03\x88\x01\x01\x12\x41\n\x12output_audio_codec\x18\x06 \x01(\x0e\x32 .nvidia.ai4m.audio.v1.AudioCodecH\x04\x88\x01\x01\x12 \n\x13head_movement_speed\x18\x07 \x01(\rH\x05\x88\x01\x01\x12S\n\x17\x62\x61\x63kground_audio_config\x18\x08 \x01(\x0b\x32-.nvidia.ai4m.lipsync.v1.BackgroundAudioConfigH\x06\x88\x01\x01\x42\x1b\n\x19_is_speaker_info_providedB\x0f\n\r_extend_audioB\x0f\n\r_extend_videoB\x18\n\x16_output_video_encodingB\x15\n\x13_output_audio_codecB\x16\n\x14_head_movement_speedB\x1a\n\x18_background_audio_config\"\x99\x01\n\x0bSpeakerInfo\x12\x38\n\x0cspeaker_bbox\x18\x01 \x01(\x0b\x32\".nvidia.ai4m.common.v1.BoundingBox\x12\x17\n\nspeaker_id\x18\x02 \x01(\x05H\x00\x88\x01\x01\x12\x18\n\x0bis_speaking\x18\x03 \x01(\x08H\x01\x88\x01\x01\x42\r\n\x0b_speaker_idB\x0e\n\x0c_is_speaking\"\x83\x01\n\x13SpeakerInfoPerFrame\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\r\x12:\n\rspeaker_infos\x18\x02 \x03(\x0b\x32#.nvidia.ai4m.lipsync.v1.SpeakerInfo\x12\x13\n\x06\x62ypass\x18\x03 \x01(\x08H\x00\x88\x01\x01\x42\t\n\x07_bypass\"\x8c\x02\n\x10LipsyncInputData\x12\x1c\n\x0fvideo_file_data\x18\x01 \x01(\x0cH\x00\x88\x01\x01\x12\x1c\n\x0f\x61udio_file_data\x18\x02 \x01(\x0cH\x01\x88\x01\x01\x12L\n\x17per_frame_speaker_infos\x18\x03 \x03(\x0b\x32+.nvidia.ai4m.lipsync.v1.SpeakerInfoPerFrame\x12\'\n\x1a\x62\x61\x63kground_audio_file_data\x18\x04 \x01(\x0cH\x02\x88\x01\x01\x42\x12\n\x10_video_file_dataB\x12\n\x10_audio_file_dataB\x1d\n\x1b_background_audio_file_data\"\x97\x01\n\x0eLipsyncRequest\x12\x37\n\x06\x63onfig\x18\x01 \x01(\x0b\x32%.nvidia.ai4m.lipsync.v1.LipsyncConfigH\x00\x12\x39\n\x05input\x18\x02 \x01(\x0b\x32(.nvidia.ai4m.lipsync.v1.LipsyncInputDataH\x00\x42\x11\n\x0flipsync_request\"\xe2\x01\n\x0fLipsyncResponse\x12\x37\n\x06\x63onfig\x18\x01 \x01(\x0b\x32%.nvidia.ai4m.lipsync.v1.LipsyncConfigH\x00\x12\x19\n\x0fvideo_file_data\x18\x02 \x01(\x0cH\x00\x12+\n\tkeepalive\x18\x03 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x12:\n\x0cservice_info\x18\x04 \x01(\x0b\x32\".nvidia.ai4m.common.v1.ServiceInfoH\x00\x42\x12\n\x10lipsync_response*E\n\x0b\x45xtendAudio\x12\x1c\n\x18\x45XTEND_AUDIO_UNSPECIFIED\x10\x00\x12\x18\n\x14\x45XTEND_AUDIO_SILENCE\x10\x01*_\n\x0b\x45xtendVideo\x12\x1c\n\x18\x45XTEND_VIDEO_UNSPECIFIED\x10\x00\x12\x18\n\x14\x45XTEND_VIDEO_FORWARD\x10\x01\x12\x18\n\x14\x45XTEND_VIDEO_REVERSE\x10\x02\x32r\n\x0eLipSyncService\x12`\n\x07Lipsync\x12&.nvidia.ai4m.lipsync.v1.LipsyncRequest\x1a\'.nvidia.ai4m.lipsync.v1.LipsyncResponse\"\x00(\x01\x30\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'nvidia.ai4m.lipsync.v1.lipsync_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_EXTENDAUDIO']._serialized_start=1972
-  _globals['_EXTENDAUDIO']._serialized_end=2041
-  _globals['_EXTENDVIDEO']._serialized_start=2043
-  _globals['_EXTENDVIDEO']._serialized_end=2138
-  _globals['_BACKGROUNDAUDIOCONFIG']._serialized_start=198
-  _globals['_BACKGROUNDAUDIOCONFIG']._serialized_end=417
-  _globals['_LIPSYNCCONFIG']._serialized_start=420
-  _globals['_LIPSYNCCONFIG']._serialized_end=1086
-  _globals['_SPEAKERINFO']._serialized_start=1089
-  _globals['_SPEAKERINFO']._serialized_end=1242
-  _globals['_SPEAKERINFOPERFRAME']._serialized_start=1245
-  _globals['_SPEAKERINFOPERFRAME']._serialized_end=1376
-  _globals['_LIPSYNCINPUTDATA']._serialized_start=1379
-  _globals['_LIPSYNCINPUTDATA']._serialized_end=1647
-  _globals['_LIPSYNCREQUEST']._serialized_start=1650
-  _globals['_LIPSYNCREQUEST']._serialized_end=1801
-  _globals['_LIPSYNCRESPONSE']._serialized_start=1804
-  _globals['_LIPSYNCRESPONSE']._serialized_end=1970
-  _globals['_LIPSYNCSERVICE']._serialized_start=2140
-  _globals['_LIPSYNCSERVICE']._serialized_end=2254
+  _globals['_EXTENDAUDIO']._serialized_start=2074
+  _globals['_EXTENDAUDIO']._serialized_end=2143
+  _globals['_EXTENDVIDEO']._serialized_start=2145
+  _globals['_EXTENDVIDEO']._serialized_end=2240
+  _globals['_BACKGROUNDAUDIOCONFIG']._serialized_start=240
+  _globals['_BACKGROUNDAUDIOCONFIG']._serialized_end=459
+  _globals['_LIPSYNCCONFIG']._serialized_start=462
+  _globals['_LIPSYNCCONFIG']._serialized_end=1128
+  _globals['_SPEAKERINFO']._serialized_start=1131
+  _globals['_SPEAKERINFO']._serialized_end=1284
+  _globals['_SPEAKERINFOPERFRAME']._serialized_start=1287
+  _globals['_SPEAKERINFOPERFRAME']._serialized_end=1418
+  _globals['_LIPSYNCINPUTDATA']._serialized_start=1421
+  _globals['_LIPSYNCINPUTDATA']._serialized_end=1689
+  _globals['_LIPSYNCREQUEST']._serialized_start=1692
+  _globals['_LIPSYNCREQUEST']._serialized_end=1843
+  _globals['_LIPSYNCRESPONSE']._serialized_start=1846
+  _globals['_LIPSYNCRESPONSE']._serialized_end=2072
+  _globals['_LIPSYNCSERVICE']._serialized_start=2242
+  _globals['_LIPSYNCSERVICE']._serialized_end=2356
 # @@protoc_insertion_point(module_scope)

@@ -22,7 +22,6 @@
 # Constants for data handling
 DATA_CHUNK_SIZE = 64 * 1024  # bytes, we send the mp4 file in 64KB chunks
 DEFAULT_IDR_INTERVAL = 8  # frames
-DEFAULT_STREAMABLE_VIDEO_PATH = "../assets/sample_streamable.mp4"
 DEFAULT_NON_STREAMABLE_VIDEO_PATH = "../assets/sample_transactional.mp4"
 
 # Default values from eyecontact.proto
@@ -59,4 +58,5 @@ PARAM_RANGES = {
     "head_pitch_threshold_high": (10.0, 35.0),
     "head_yaw_threshold_low": (10.0, 35.0),
     "head_yaw_threshold_high": (10.0, 35.0),
+    "enable_multi_person": (0, 1),
 }

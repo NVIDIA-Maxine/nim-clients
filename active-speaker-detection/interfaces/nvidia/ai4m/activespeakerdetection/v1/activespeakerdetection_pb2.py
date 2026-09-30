@@ -25,34 +25,37 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 from nvidia.ai4m.audio.v1 import audio_pb2 as nvidia_dot_ai4m_dot_audio_dot_v1_dot_audio__pb2
 from nvidia.ai4m.common.v1 import common_pb2 as nvidia_dot_ai4m_dot_common_dot_v1_dot_common__pb2
+from nvidia.ai4m.common.v1 import service_info_pb2 as nvidia_dot_ai4m_dot_common_dot_v1_dot_service__info__pb2
 from nvidia.ai4m.video.v1 import video_pb2 as nvidia_dot_ai4m_dot_video_dot_v1_dot_video__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\nBnvidia/ai4m/activespeakerdetection/v1/activespeakerdetection.proto\x12%nvidia.ai4m.activespeakerdetection.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a nvidia/ai4m/audio/v1/audio.proto\x1a\"nvidia/ai4m/common/v1/common.proto\x1a nvidia/ai4m/video/v1/video.proto\"\xea\x01\n\x1a\x44\x65tectActiveSpeakerRequest\x12U\n\x06\x63onfig\x18\x01 \x01(\x0b\x32\x43.nvidia.ai4m.activespeakerdetection.v1.ActiveSpeakerDetectionConfigH\x00\x12Q\n\x04\x64\x61ta\x18\x02 \x01(\x0b\x32\x41.nvidia.ai4m.activespeakerdetection.v1.ActiveSpeakerDetectionDataH\x00\x42\"\n active_speaker_detection_request\"\xbd\x02\n\x1c\x41\x63tiveSpeakerDetectionConfig\x12=\n\x12input_audio_config\x18\x01 \x01(\x0b\x32!.nvidia.ai4m.audio.v1.AudioConfig\x12=\n\x12input_video_config\x18\x02 \x01(\x0b\x32!.nvidia.ai4m.video.v1.VideoConfig\x12U\n\x13\x61udio_source_config\x18\x03 \x01(\x0e\x32\x38.nvidia.ai4m.activespeakerdetection.v1.AudioSourceConfig\x12(\n\x1bspeaker_detection_threshold\x18\x04 \x01(\x02H\x00\x88\x01\x01\x42\x1e\n\x1c_speaker_detection_threshold\"\xdd\x01\n\x1a\x41\x63tiveSpeakerDetectionData\x12\x17\n\nvideo_data\x18\x01 \x01(\x0cH\x00\x88\x01\x01\x12\x17\n\naudio_data\x18\x02 \x01(\x0cH\x01\x88\x01\x01\x12Z\n\x10\x64iarization_info\x18\x03 \x01(\x0b\x32;.nvidia.ai4m.activespeakerdetection.v1.AudioDiarizationInfoH\x02\x88\x01\x01\x42\r\n\x0b_video_dataB\r\n\x0b_audio_dataB\x13\n\x11_diarization_info\"\x89\x01\n\x14\x41udioDiarizationInfo\x12I\n\x08segments\x18\x01 \x03(\x0b\x32\x37.nvidia.ai4m.activespeakerdetection.v1.AudioSegmentInfo\x12\x17\n\ntranscript\x18\x02 \x01(\tH\x00\x88\x01\x01\x42\r\n\x0b_transcript\"\x96\x01\n\x10\x41udioSegmentInfo\x12\x12\n\nstart_time\x18\x01 \x01(\r\x12\x10\n\x08\x65nd_time\x18\x02 \x01(\r\x12\x12\n\nspeaker_id\x18\x03 \x01(\x05\x12\x11\n\x04word\x18\x04 \x01(\tH\x00\x88\x01\x01\x12\x1a\n\rlanguage_code\x18\x05 \x01(\tH\x01\x88\x01\x01\x42\x07\n\x05_wordB\x10\n\x0e_language_code\"\xad\x01\n\x0bSpeakerInfo\x12\x38\n\x0cspeaker_bbox\x18\x01 \x01(\x0b\x32\".nvidia.ai4m.common.v1.BoundingBox\x12\x1b\n\x13\x64iarized_speaker_id\x18\x02 \x01(\x05\x12\x0f\n\x07\x66\x61\x63\x65_id\x18\x03 \x01(\x05\x12\x13\n\x0bis_speaking\x18\x04 \x01(\x08\x12!\n\x19\x66\x61\x63\x65_detection_confidence\x18\x05 \x01(\x02\"\x9d\x02\n\x1b\x44\x65tectActiveSpeakerResponse\x12U\n\x06\x63onfig\x18\x01 \x01(\x0b\x32\x43.nvidia.ai4m.activespeakerdetection.v1.ActiveSpeakerDetectionConfigH\x00\x12n\n\x1f\x61\x63tive_speaker_detection_result\x18\x02 \x01(\x0b\x32\x43.nvidia.ai4m.activespeakerdetection.v1.ActiveSpeakerDetectionResultH\x00\x12+\n\tkeepalive\x18\x03 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x42\n\n\x08response\"z\n\x1c\x41\x63tiveSpeakerDetectionResult\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\r\x12H\n\x0cspeaker_data\x18\x02 \x03(\x0b\x32\x32.nvidia.ai4m.activespeakerdetection.v1.SpeakerInfo*\x8c\x01\n\x11\x41udioSourceConfig\x12#\n\x1f\x41UDIO_SOURCE_CONFIG_UNSPECIFIED\x10\x00\x12\'\n#AUDIO_SOURCE_CONFIG_SEPARATE_STREAM\x10\x01\x12)\n%AUDIO_SOURCE_CONFIG_EMBEDDED_IN_VIDEO\x10\x02\x32\xc4\x01\n\x1d\x41\x63tiveSpeakerDetectionService\x12\xa2\x01\n\x13\x44\x65tectActiveSpeaker\x12\x41.nvidia.ai4m.activespeakerdetection.v1.DetectActiveSpeakerRequest\x1a\x42.nvidia.ai4m.activespeakerdetection.v1.DetectActiveSpeakerResponse\"\x00(\x01\x30\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\nBnvidia/ai4m/activespeakerdetection/v1/activespeakerdetection.proto\x12%nvidia.ai4m.activespeakerdetection.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a nvidia/ai4m/audio/v1/audio.proto\x1a\"nvidia/ai4m/common/v1/common.proto\x1a(nvidia/ai4m/common/v1/service_info.proto\x1a nvidia/ai4m/video/v1/video.proto\"\xea\x01\n\x1a\x44\x65tectActiveSpeakerRequest\x12U\n\x06\x63onfig\x18\x01 \x01(\x0b\x32\x43.nvidia.ai4m.activespeakerdetection.v1.ActiveSpeakerDetectionConfigH\x00\x12Q\n\x04\x64\x61ta\x18\x02 \x01(\x0b\x32\x41.nvidia.ai4m.activespeakerdetection.v1.ActiveSpeakerDetectionDataH\x00\x42\"\n active_speaker_detection_request\"\xc0\x03\n\x1c\x41\x63tiveSpeakerDetectionConfig\x12=\n\x12input_audio_config\x18\x01 \x01(\x0b\x32!.nvidia.ai4m.audio.v1.AudioConfig\x12=\n\x12input_video_config\x18\x02 \x01(\x0b\x32!.nvidia.ai4m.video.v1.VideoConfig\x12U\n\x13\x61udio_source_config\x18\x03 \x01(\x0e\x32\x38.nvidia.ai4m.activespeakerdetection.v1.AudioSourceConfig\x12(\n\x1bspeaker_detection_threshold\x18\x04 \x01(\x02H\x00\x88\x01\x01\x12\x64\n\x18voice_activity_smoothing\x18\x05 \x01(\x0e\x32=.nvidia.ai4m.activespeakerdetection.v1.VoiceActivitySmoothingH\x01\x88\x01\x01\x42\x1e\n\x1c_speaker_detection_thresholdB\x1b\n\x19_voice_activity_smoothing\"\xdd\x01\n\x1a\x41\x63tiveSpeakerDetectionData\x12\x17\n\nvideo_data\x18\x01 \x01(\x0cH\x00\x88\x01\x01\x12\x17\n\naudio_data\x18\x02 \x01(\x0cH\x01\x88\x01\x01\x12Z\n\x10\x64iarization_info\x18\x03 \x01(\x0b\x32;.nvidia.ai4m.activespeakerdetection.v1.AudioDiarizationInfoH\x02\x88\x01\x01\x42\r\n\x0b_video_dataB\r\n\x0b_audio_dataB\x13\n\x11_diarization_info\"\x89\x01\n\x14\x41udioDiarizationInfo\x12I\n\x08segments\x18\x01 \x03(\x0b\x32\x37.nvidia.ai4m.activespeakerdetection.v1.AudioSegmentInfo\x12\x17\n\ntranscript\x18\x02 \x01(\tH\x00\x88\x01\x01\x42\r\n\x0b_transcript\"\x96\x01\n\x10\x41udioSegmentInfo\x12\x12\n\nstart_time\x18\x01 \x01(\r\x12\x10\n\x08\x65nd_time\x18\x02 \x01(\r\x12\x12\n\nspeaker_id\x18\x03 \x01(\x05\x12\x11\n\x04word\x18\x04 \x01(\tH\x00\x88\x01\x01\x12\x1a\n\rlanguage_code\x18\x05 \x01(\tH\x01\x88\x01\x01\x42\x07\n\x05_wordB\x10\n\x0e_language_code\"\xad\x01\n\x0bSpeakerInfo\x12\x38\n\x0cspeaker_bbox\x18\x01 \x01(\x0b\x32\".nvidia.ai4m.common.v1.BoundingBox\x12\x1b\n\x13\x64iarized_speaker_id\x18\x02 \x01(\x05\x12\x0f\n\x07\x66\x61\x63\x65_id\x18\x03 \x01(\x05\x12\x13\n\x0bis_speaking\x18\x04 \x01(\x08\x12!\n\x19\x66\x61\x63\x65_detection_confidence\x18\x05 \x01(\x02\"\xd9\x02\n\x1b\x44\x65tectActiveSpeakerResponse\x12U\n\x06\x63onfig\x18\x01 \x01(\x0b\x32\x43.nvidia.ai4m.activespeakerdetection.v1.ActiveSpeakerDetectionConfigH\x00\x12n\n\x1f\x61\x63tive_speaker_detection_result\x18\x02 \x01(\x0b\x32\x43.nvidia.ai4m.activespeakerdetection.v1.ActiveSpeakerDetectionResultH\x00\x12+\n\tkeepalive\x18\x03 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x12:\n\x0cservice_info\x18\x04 \x01(\x0b\x32\".nvidia.ai4m.common.v1.ServiceInfoH\x00\x42\n\n\x08response\"z\n\x1c\x41\x63tiveSpeakerDetectionResult\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\r\x12H\n\x0cspeaker_data\x18\x02 \x03(\x0b\x32\x32.nvidia.ai4m.activespeakerdetection.v1.SpeakerInfo*\x8c\x01\n\x11\x41udioSourceConfig\x12#\n\x1f\x41UDIO_SOURCE_CONFIG_UNSPECIFIED\x10\x00\x12\'\n#AUDIO_SOURCE_CONFIG_SEPARATE_STREAM\x10\x01\x12)\n%AUDIO_SOURCE_CONFIG_EMBEDDED_IN_VIDEO\x10\x02*\xa9\x01\n\x16VoiceActivitySmoothing\x12(\n$VOICE_ACTIVITY_SMOOTHING_UNSPECIFIED\x10\x00\x12 \n\x1cVOICE_ACTIVITY_SMOOTHING_OFF\x10\x01\x12 \n\x1cVOICE_ACTIVITY_SMOOTHING_LOW\x10\x02\x12!\n\x1dVOICE_ACTIVITY_SMOOTHING_HIGH\x10\x03\x32\xc4\x01\n\x1d\x41\x63tiveSpeakerDetectionService\x12\xa2\x01\n\x13\x44\x65tectActiveSpeaker\x12\x41.nvidia.ai4m.activespeakerdetection.v1.DetectActiveSpeakerRequest\x1a\x42.nvidia.ai4m.activespeakerdetection.v1.DetectActiveSpeakerResponse\"\x00(\x01\x30\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'nvidia.ai4m.activespeakerdetection.v1.activespeakerdetection_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_AUDIOSOURCECONFIG']._serialized_start=1905
-  _globals['_AUDIOSOURCECONFIG']._serialized_end=2045
-  _globals['_DETECTACTIVESPEAKERREQUEST']._serialized_start=243
-  _globals['_DETECTACTIVESPEAKERREQUEST']._serialized_end=477
-  _globals['_ACTIVESPEAKERDETECTIONCONFIG']._serialized_start=480
-  _globals['_ACTIVESPEAKERDETECTIONCONFIG']._serialized_end=797
-  _globals['_ACTIVESPEAKERDETECTIONDATA']._serialized_start=800
-  _globals['_ACTIVESPEAKERDETECTIONDATA']._serialized_end=1021
-  _globals['_AUDIODIARIZATIONINFO']._serialized_start=1024
-  _globals['_AUDIODIARIZATIONINFO']._serialized_end=1161
-  _globals['_AUDIOSEGMENTINFO']._serialized_start=1164
-  _globals['_AUDIOSEGMENTINFO']._serialized_end=1314
-  _globals['_SPEAKERINFO']._serialized_start=1317
-  _globals['_SPEAKERINFO']._serialized_end=1490
-  _globals['_DETECTACTIVESPEAKERRESPONSE']._serialized_start=1493
-  _globals['_DETECTACTIVESPEAKERRESPONSE']._serialized_end=1778
-  _globals['_ACTIVESPEAKERDETECTIONRESULT']._serialized_start=1780
-  _globals['_ACTIVESPEAKERDETECTIONRESULT']._serialized_end=1902
-  _globals['_ACTIVESPEAKERDETECTIONSERVICE']._serialized_start=2048
-  _globals['_ACTIVESPEAKERDETECTIONSERVICE']._serialized_end=2244
+  _globals['_AUDIOSOURCECONFIG']._serialized_start=2138
+  _globals['_AUDIOSOURCECONFIG']._serialized_end=2278
+  _globals['_VOICEACTIVITYSMOOTHING']._serialized_start=2281
+  _globals['_VOICEACTIVITYSMOOTHING']._serialized_end=2450
+  _globals['_DETECTACTIVESPEAKERREQUEST']._serialized_start=285
+  _globals['_DETECTACTIVESPEAKERREQUEST']._serialized_end=519
+  _globals['_ACTIVESPEAKERDETECTIONCONFIG']._serialized_start=522
+  _globals['_ACTIVESPEAKERDETECTIONCONFIG']._serialized_end=970
+  _globals['_ACTIVESPEAKERDETECTIONDATA']._serialized_start=973
+  _globals['_ACTIVESPEAKERDETECTIONDATA']._serialized_end=1194
+  _globals['_AUDIODIARIZATIONINFO']._serialized_start=1197
+  _globals['_AUDIODIARIZATIONINFO']._serialized_end=1334
+  _globals['_AUDIOSEGMENTINFO']._serialized_start=1337
+  _globals['_AUDIOSEGMENTINFO']._serialized_end=1487
+  _globals['_SPEAKERINFO']._serialized_start=1490
+  _globals['_SPEAKERINFO']._serialized_end=1663
+  _globals['_DETECTACTIVESPEAKERRESPONSE']._serialized_start=1666
+  _globals['_DETECTACTIVESPEAKERRESPONSE']._serialized_end=2011
+  _globals['_ACTIVESPEAKERDETECTIONRESULT']._serialized_start=2013
+  _globals['_ACTIVESPEAKERDETECTIONRESULT']._serialized_end=2135
+  _globals['_ACTIVESPEAKERDETECTIONSERVICE']._serialized_start=2453
+  _globals['_ACTIVESPEAKERDETECTIONSERVICE']._serialized_end=2649
 # @@protoc_insertion_point(module_scope)

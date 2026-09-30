@@ -60,7 +60,7 @@ cd eye-contact/protos/windows/
 
 ./compile_protos.bat
 ```
-The compiled proto files will be generated in `nim-clients/eye-contact/interfaces` directory.
+The compiled proto files will be generated in the `nim-clients/eye-contact/interfaces` directory, mirroring the proto package structure (`nvidia/maxine/eyecontact/v1/` and `nvidia/ai4m/common/v1/`).
 
 ### 4. Host the NIM Server
 
@@ -95,10 +95,10 @@ The following command uses the sample video file and generates an `output.mp4` f
    python eye-contact.py --target 127.0.0.1:8001 --input ../assets/transactional.mp4 --output output.mp4
    ```
 
-The following command uses streaming mode (for streamable video files):
+The following command uses a streamable video file. The server automatically detects streamable inputs and uses the streaming inference path internally, so no extra flag is required:
 
    ```bash
-   python eye-contact.py --target 127.0.0.1:8001 --input ../assets/streamable.mp4 --output output.mp4 --streaming
+   python eye-contact.py --target 127.0.0.1:8001 --input ../assets/streamable.mp4 --output output.mp4
    ```
 
 > **Note:** The supported file type is MP4.
@@ -125,9 +125,9 @@ The following command uses streaming mode (for streamable video files):
 -  `--target`   IP:port of gRPC service, when hosted locally. Use grpc.nvcf.nvidia.com:443 when hosted on NVCF.
 -  `--input`    The path to the input video file.
 -  `--output`   The path for the output video file.
--  `--streaming` Flag to enable gRPC streaming mode. Required for streamable video input.
 -  `--api-key`  NGC API key required for authentication, utilized when using TRY API ignored otherwise
 -  `--function-id`  NVCF function ID for the service, utilized when using TRY API ignored otherwise
+-  `--client-session-id`  Client-assigned session identifier sent as gRPC metadata (key `client-session-id`). The server echoes it back in the service info banner and uses it to correlate client and server logs. If omitted, none is sent.
 
 #### Advanced Configuration Parameters
 
@@ -163,8 +163,10 @@ The Eye Contact client supports extensive parameter customization for fine-tunin
 -  `--eye-size-sensitivity` Eye size sensitivity parameter (default: 3, range: [2, 6]).
 -  `--enable-lookaway` Flag to toggle look away (default: 0, choices: [0, 1]).
 -  `--lookaway-max-offset` Maximum value of gaze offset angle (degrees) during a random look away (default: 5, range: [1, 10]).
--  `--lookaway-interval-min` Minimum number of frames at which random look away occurs (default: 100, range: [1, 600]).
--  `--lookaway-interval-range` Range for picking the number of frames at which random look away occurs (default: 250, range: [1, 600]).
+-  `--lookaway-interval-min` Minimum number of frames at which random look away occurs (default: 3, range: [1, 600]).
+-  `--lookaway-interval-range` Range for picking the number of frames at which random look away occurs (default: 8, range: [1, 600]).
+-  `--enable-multi-person` Flag to redirect gaze for every detected face instead of a single subject. When omitted, gaze is redirected for a single subject.
+
 
 **Gaze Threshold Parameters**
 -  `--gaze-pitch-threshold-low` Gaze pitch threshold (degrees) at which the redirection starts transitioning (default: 20.0, range: [10, 35]).
@@ -180,13 +182,12 @@ The Eye Contact client supports extensive parameter customization for fine-tunin
 
 #### Important Notes about Streaming Mode
 
-Streaming mode (`--streaming`) is required when processing videos that are optimized for streaming (that is, they have the 'moov' atom at the beginning).
+The server automatically detects streamable videos (those optimized for streaming, with the 'moov' atom at the beginning of the file) and uses the streaming inference path internally. No client flag is required; simply provide a streamable video as input. Non-streamable inputs are processed in transactional mode automatically.
 
-If you encounter an error when processing non-streamable video files, you can convert your video to be streamable using the following command:
+For best performance, convert your videos to a streamable format using the following command:
   ```bash
   ffmpeg -i input.mp4 -movflags +faststart output_streamable.mp4
   ```
-The client automatically validates video compatibility with the selected mode and provides helpful error messages.
 
 When using SSL mode, the default path for the credentials is `../ssl_key/<filename>.pem`.
 

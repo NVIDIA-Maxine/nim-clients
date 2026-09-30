@@ -60,20 +60,27 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--video-input",
         type=str,
-        default=DEFAULT_VIDEO_PATH,
-        help="The path to the input video file (MP4 format).",
+        default=None,
+        help="The path to the input video file (MP4 format). "
+        f"If omitted, the bundled sample video ({DEFAULT_VIDEO_PATH}) is used.",
     )
     parser.add_argument(
         "--audio-input",
         type=str,
-        default=DEFAULT_AUDIO_PATH,
-        help="The path to the input audio file (WAV/MP3 format).",
+        default=None,
+        help="The path to the input audio file (WAV/MP3 format). "
+        "Only defaults to the bundled sample audio when the sample video is "
+        "also used; it is required when a custom --video-input is provided "
+        "(unless --skip-audio is set).",
     )
     parser.add_argument(
         "--diarization-input",
         type=str,
-        default=DEFAULT_DIARIZATION_PATH,
-        help="The path to the diarization file (JSON format with word-level speaker info).",
+        default=None,
+        help="The path to the diarization file (JSON format with word-level speaker info). "
+        "Only defaults to the bundled sample diarization when the sample video "
+        "is also used; it is required when a custom --video-input is provided. "
+        "The sample diarization only matches the sample video.",
     )
     parser.add_argument(
         "--skip-audio",
@@ -86,6 +93,31 @@ def create_argument_parser() -> argparse.ArgumentParser:
         type=str,
         default="speaker_detection_output.mp4",
         help="The path for the output video file with speaker bounding boxes.",
+    )
+    parser.add_argument(
+        "--client-session-id",
+        type=str,
+        default=None,
+        help="Client-assigned session identifier sent as gRPC metadata "
+        "(key 'client-session-id'). The server echoes it back in ServiceInfo and "
+        "uses it to correlate client and server logs. If omitted, none is sent.",
+    )
+    parser.add_argument(
+        "--voice-activity-smoothing",
+        type=str,
+        default=None,
+        choices=["off", "low", "high"],
+        help="Voice-activity smoothing level applied to speaking decisions. "
+        "If omitted, the deployment default (NV_AI4M_ASD_VA_SMOOTHING) is used.",
+    )
+    parser.add_argument(
+        "--speaker-detection-threshold",
+        type=float,
+        default=None,
+        help="Minimum confidence score in the open interval (0, 1) required to "
+        "classify a detected face as actively speaking. If omitted, the server's "
+        "configured default is used. A value <= 0 also falls back to the default; "
+        "values outside (0, 1) are rejected by the server with INVALID_ARGUMENT.",
     )
 
     return parser
@@ -113,16 +145,58 @@ class ActiveSpeakerDetectionConfig:
     embedded_audio_codec: str = "opus"
     input_audio_format: str | None = None
     input_video_format: str | None = None
+    voice_activity_smoothing: str | None = None
+    speaker_detection_threshold: float | None = None
 
     @classmethod
     def from_args(cls, args):
-        """Create config from command line arguments."""
+        """Create config from command line arguments.
+
+        The bundled sample assets (video, audio, diarization) form a matched
+        set: the sample diarization/audio are only meaningful with the sample
+        video. An explicitly passed path is always honored; the sample
+        diarization/audio are used only when the sample video is also used.
+        With a custom --video-input, the matching --diarization-input (and
+        --audio-input unless --skip-audio) must be provided explicitly, or a
+        ValueError is raised instead of silently substituting sample assets.
+        """
+        using_sample_video = args.video_input is None
+        video_filepath = DEFAULT_VIDEO_PATH if using_sample_video else args.video_input
+
+        # Diarization: honor an explicit path; fall back to the sample only
+        # with the sample video; otherwise refuse rather than mismatch.
+        if args.diarization_input is not None:
+            diarization_filepath = args.diarization_input
+        elif using_sample_video:
+            diarization_filepath = DEFAULT_DIARIZATION_PATH
+        else:
+            raise ValueError(
+                "--diarization-input is required with a custom --video-input. "
+                "The bundled sample diarization only matches the sample video."
+            )
+
+        # Audio: same rule (irrelevant when --skip-audio uses embedded audio).
+        if args.skip_audio:
+            audio_filepath = None
+        elif args.audio_input is not None:
+            audio_filepath = args.audio_input
+        elif using_sample_video:
+            audio_filepath = DEFAULT_AUDIO_PATH
+        else:
+            raise ValueError(
+                "--audio-input is required with a custom --video-input "
+                "(or pass --skip-audio to use the video's embedded audio). "
+                "The bundled sample audio only matches the sample video."
+            )
+
         return cls(
-            video_filepath=args.video_input,
-            audio_filepath=args.audio_input,
-            diarization_filepath=args.diarization_input,
+            video_filepath=video_filepath,
+            audio_filepath=audio_filepath,
+            diarization_filepath=diarization_filepath,
             output_filepath=args.output,
             skip_audio=args.skip_audio,
+            voice_activity_smoothing=args.voice_activity_smoothing,
+            speaker_detection_threshold=args.speaker_detection_threshold,
         )
 
     def __str__(self) -> str:
@@ -141,6 +215,9 @@ class ActiveSpeakerDetectionConfig:
             f"Diarization input : {diarization_display}",
             f"Output file       : {self.output_filepath}",
             f"Skip audio        : {self.skip_audio}",
+            f"VA smoothing      : {self.voice_activity_smoothing or '(deployment default)'}",
+            f"Speaker threshold : "
+            f"{self.speaker_detection_threshold if self.speaker_detection_threshold is not None else '(deployment default)'}",
             sep,
         ]
         return "\n".join(lines)

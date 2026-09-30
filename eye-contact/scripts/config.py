@@ -39,7 +39,6 @@ sys.path.append(os.path.join(SCRIPT_PATH, "../interfaces"))
 from constants import (  # noqa: E402
     DEFAULT_IDR_INTERVAL,
     DEFAULT_NON_STREAMABLE_VIDEO_PATH,
-    DEFAULT_STREAMABLE_VIDEO_PATH,
     DEFAULT_TEMPORAL,
     DEFAULT_DETECT_CLOSURE,
     DEFAULT_EYE_SIZE_SENSITIVITY,
@@ -58,12 +57,11 @@ from constants import (  # noqa: E402
     PARAM_RANGES,
 )
 from utils.utils import (  # noqa: E402
-    check_streamable,
     is_file_available,
     add_ssl_arguments,
     add_preview_arguments,
 )
-import eyecontact_pb2  # noqa: E402
+from nvidia.maxine.eyecontact.v1 import eyecontact_pb2  # noqa: E402
 
 
 class SmartFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
@@ -109,11 +107,14 @@ def create_argument_parser() -> argparse.ArgumentParser:
         help="The path for the output video file.",
     )
 
-    # Streaming support
+    # Request correlation
     parser.add_argument(
-        "--streaming",
-        action="store_true",
-        help="Flag to enable grpc streaming mode. Required for streamable " "video input.",
+        "--client-session-id",
+        type=str,
+        default=None,
+        help="Client-assigned session identifier sent as gRPC metadata "
+        "(key 'client-session-id'). The server echoes it back in ServiceInfo and "
+        "uses it to correlate client and server logs. If omitted, none is sent.",
     )
 
     # Video encoding arguments
@@ -264,6 +265,15 @@ def create_argument_parser() -> argparse.ArgumentParser:
         f"(default: {DEFAULT_HEAD_YAW_THRESHOLD_HIGH}, range: [10, 35])",
     )
 
+    # Multi-person mode
+    parser.add_argument(
+        "--enable-multi-person",
+        action="store_true",
+        help="Flag to redirect gaze for every detected face instead of a "
+        "single subject. When omitted, gaze is redirected for a single "
+        "subject.",
+    )
+
     return parser
 
 
@@ -284,7 +294,6 @@ class EyeContactConfig:
     Attributes:
         video_filepath: Path to input video file
         output_filepath: Path for output video
-        streaming: Whether to use streaming mode
         lossless: Whether to use lossless encoding
         bitrate: Output video bitrate
         idr_interval: IDR frame interval
@@ -304,11 +313,13 @@ class EyeContactConfig:
         head_pitch_threshold_high: High threshold for head pitch
         head_yaw_threshold_low: Low threshold for head yaw
         head_yaw_threshold_high: High threshold for head yaw
+        enable_multi_person: Multi-person gaze redirection flag
+        client_session_id: Client-assigned session identifier sent as gRPC
+            metadata and echoed back by the server in ServiceInfo
     """
 
     video_filepath: os.PathLike
     output_filepath: os.PathLike
-    streaming: bool
     lossless: bool
     bitrate: int | None
     idr_interval: int
@@ -328,6 +339,8 @@ class EyeContactConfig:
     head_pitch_threshold_high: float
     head_yaw_threshold_low: float
     head_yaw_threshold_high: float
+    enable_multi_person: bool
+    client_session_id: str | None = None
 
     @classmethod
     def from_args(cls, args):
@@ -343,7 +356,6 @@ class EyeContactConfig:
         return cls(
             video_filepath=args.input,
             output_filepath=args.output,
-            streaming=args.streaming,
             lossless=args.lossless,
             bitrate=args.bitrate,
             idr_interval=args.idr_interval,
@@ -363,6 +375,8 @@ class EyeContactConfig:
             head_pitch_threshold_high=args.head_pitch_threshold_high,
             head_yaw_threshold_low=args.head_yaw_threshold_low,
             head_yaw_threshold_high=args.head_yaw_threshold_high,
+            enable_multi_person=args.enable_multi_person,
+            client_session_id=args.client_session_id,
         )
 
     def __str__(self) -> str:
@@ -389,6 +403,7 @@ class EyeContactConfig:
             + f"Head pitch threshold high: {self.head_pitch_threshold_high}\n"
             + f"Head yaw threshold low: {self.head_yaw_threshold_low}\n"
             + f"Head yaw threshold high: {self.head_yaw_threshold_high}\n"
+            + f"Enable multi person: {self.enable_multi_person}\n"
         )
         if self.lossless:
             output += "Encoding    : Lossless\n"
@@ -399,8 +414,8 @@ class EyeContactConfig:
             output += f"Bitrate     : {bitrate_str}\n" + f"IDR interval: {self.idr_interval}\n"
         output += (
             f"Output file : {self.output_filepath}\n"
-            + f"Streaming   : {self.streaming}\n"
             + f"Lossless    : {self.lossless}\n"
+            + f"Session ID  : {self.client_session_id or '(not sent)'}\n"
             + "=" * 60
         )
         return output
@@ -411,7 +426,6 @@ class EyeContactConfig:
         Checks that:
         - Input file exists and has correct format
         - Parameters are within valid ranges
-        - Streaming mode requirements are met
 
         Raises:
             FileNotFoundError: If input file doesn't exist
@@ -422,26 +436,6 @@ class EyeContactConfig:
         is_video_available = is_file_available(self.video_filepath, ["mp4"])
         if not is_video_available:
             raise RuntimeError("Only MP4 video format is supported")
-
-        if self.streaming:
-            # Check if file is streamable
-            is_streamable = check_streamable(self.video_filepath)
-            if not is_streamable:
-                # If using the default non-streamable video, suggest the
-                # streamable version
-                if self.video_filepath == DEFAULT_NON_STREAMABLE_VIDEO_PATH:
-                    raise RuntimeError(
-                        f"Default video file is not streamable. For streaming "
-                        f"mode, use: --input {DEFAULT_STREAMABLE_VIDEO_PATH}"
-                    )
-                else:
-                    raise RuntimeError(
-                        f"Video file '{self.video_filepath}' is not streamable. "
-                        f"Please use a streamable MP4 file when using streaming "
-                        f"mode. To make a video streamable, you can use: "
-                        f"ffmpeg -i input.mp4 -movflags +faststart "
-                        f"output_streamable.mp4"
-                    )
 
         # Validate parameter ranges
         params_to_check = {
@@ -460,6 +454,7 @@ class EyeContactConfig:
             "head_pitch_threshold_high": self.head_pitch_threshold_high,
             "head_yaw_threshold_low": self.head_yaw_threshold_low,
             "head_yaw_threshold_high": self.head_yaw_threshold_high,
+            "enable_multi_person": self.enable_multi_person,
         }
 
         for param_name, param_value in params_to_check.items():
@@ -491,6 +486,7 @@ class EyeContactConfig:
             "head_pitch_threshold_high": self.head_pitch_threshold_high,
             "head_yaw_threshold_low": self.head_yaw_threshold_low,
             "head_yaw_threshold_high": self.head_yaw_threshold_high,
+            "enable_multi_person": self.enable_multi_person,
         }
 
         # Add output video encoding configuration

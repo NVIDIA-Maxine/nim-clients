@@ -21,7 +21,11 @@
 # DEALINGS IN THE SOFTWARE.
 
 
-# This script compiles Protocol Buffer (protobuf) definitions for NVIDIA Maxine Synthetic Video Detector NIM on a Linux Client.
+# This script compiles Protocol Buffer (protobuf) definitions for NVIDIA Synthetic Video Detector NIM on a Linux Client.
+#
+# Both gRPC API generations are compiled: the v1 API (nvidia.maxine) and the
+# v2 API (nvidia.ai4m). Stubs are emitted under interfaces/ mirroring each
+# proto package, so the two generations never collide.
 #
 # Execute the script using `./compile_protos.sh`
 #
@@ -32,19 +36,16 @@
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 
 # Define paths for proto files and output directory
-PROTOS_DIR=$(realpath "$SCRIPT_DIR/../proto/nvidia/maxine/syntheticvideodetector/v1")
+PROTO_ROOT=$(realpath "$SCRIPT_DIR/../proto")
 OUT_DIR=$(realpath "$SCRIPT_DIR/../../interfaces/")
 
-# Check if required directories and files exist
-if [ ! -d "$PROTOS_DIR" ]; then
-    echo "[Error] Protos directory does not exist: $PROTOS_DIR"
+# Check if required directories exist
+if [ ! -d "$PROTO_ROOT" ]; then
+    echo "[Error] Proto root directory does not exist: $PROTO_ROOT"
     exit 1
 fi
 
-if [ ! -f "$PROTOS_DIR/syntheticvideodetector.proto" ]; then
-    echo "[Error] Protobuf file not found: $PROTOS_DIR/syntheticvideodetector.proto"
-    exit 1
-fi
+mkdir -p "$OUT_DIR"
 
 # Check if Python is installed
 if ! command -v python3 > /dev/null; then
@@ -53,15 +54,32 @@ if ! command -v python3 > /dev/null; then
 fi
 
 # Log the paths for debugging
-echo "Using PROTOS_DIR: $PROTOS_DIR"
+echo "Using PROTO_ROOT: $PROTO_ROOT"
 echo "Using OUT_DIR: $OUT_DIR"
 
-# Run grpc_tools.protoc
-python3 -m grpc_tools.protoc -I="$PROTOS_DIR" \
+# Proto files to compile. The v1 service lives in the nvidia.maxine package;
+# the v2 service lives in nvidia.ai4m alongside the shared, media-agnostic
+# pre-signed URL (ingest) proto it imports.
+PROTO_FILES=(
+    "$PROTO_ROOT/nvidia/maxine/syntheticvideodetector/v1/syntheticvideodetector.proto"
+    "$PROTO_ROOT/nvidia/ai4m/ingest/v1/presigned_url.proto"
+    "$PROTO_ROOT/nvidia/ai4m/syntheticvideodetector/v1/syntheticvideodetector.proto"
+)
+
+# Verify all proto files exist
+for proto in "${PROTO_FILES[@]}"; do
+    if [ ! -f "$proto" ]; then
+        echo "[Error] Protobuf file not found: $proto"
+        exit 1
+    fi
+done
+
+# Run grpc_tools.protoc for all protos
+python3 -m grpc_tools.protoc -I="$PROTO_ROOT" \
                              --python_out="$OUT_DIR" \
                              --pyi_out="$OUT_DIR" \
                              --grpc_python_out="$OUT_DIR" \
-                             "$PROTOS_DIR/syntheticvideodetector.proto"
+                             "${PROTO_FILES[@]}"
 
 # Check if the command succeeded
 if [ $? -ne 0 ]; then
@@ -69,5 +87,20 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "gRPC files generated successfully."
+# Create __init__.py files for the package hierarchy
+for dir in \
+    "$OUT_DIR/nvidia" \
+    "$OUT_DIR/nvidia/maxine" \
+    "$OUT_DIR/nvidia/maxine/syntheticvideodetector" \
+    "$OUT_DIR/nvidia/maxine/syntheticvideodetector/v1" \
+    "$OUT_DIR/nvidia/ai4m" \
+    "$OUT_DIR/nvidia/ai4m/ingest" \
+    "$OUT_DIR/nvidia/ai4m/ingest/v1" \
+    "$OUT_DIR/nvidia/ai4m/syntheticvideodetector" \
+    "$OUT_DIR/nvidia/ai4m/syntheticvideodetector/v1"; do
+    if [ -d "$dir" ] && [ ! -f "$dir/__init__.py" ]; then
+        touch "$dir/__init__.py"
+    fi
+done
 
+echo "gRPC files generated successfully."

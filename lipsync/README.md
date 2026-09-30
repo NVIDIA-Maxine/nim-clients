@@ -27,10 +27,23 @@ cd nim-clients/lipsync/
 
 ### 2. Install Dependencies
 #### Python
+
+Create and activate a virtual environment first. On distributions that mark the system
+Python as externally managed under [PEP 668](https://peps.python.org/pep-0668/) — Ubuntu
+24.04+, Debian 12+, Fedora 38+ — installing without one fails with
+`error: externally-managed-environment`.
+
 ```bash
-# Install all the required packages using requirements.txt file in python directory  
+python -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+```
+
+```bash
+# Install all the required packages using requirements.txt file in python directory
 pip install -r requirements.txt
 ```
+
+All `python` commands below assume this environment is active.
 
 ### 3. Compile the Protos
 
@@ -41,6 +54,7 @@ The proto files are available in the `lipsync/protos/proto` folder, organized in
 - `nvidia/ai4m/audio/v1/audio.proto`: Audio codec definitions
 - `nvidia/ai4m/video/v1/video.proto`: Video encoding definitions
 - `nvidia/ai4m/common/v1/common.proto`: Common types (BoundingBox)
+- `nvidia/ai4m/common/v1/service_info.proto`: Service info banner identifying the NIM and the request being served
 
 You can compile them to generate client interfaces in your preferred programming language. For more details, refer to [Supported languages](https://grpc.io/docs/languages/) in the gRPC documentation.
 
@@ -52,8 +66,8 @@ The `grpcio` version needed for compilation can be referred at `requirements.txt
 
 To compile protos on Linux, run the following commands:
 ```bash
-# Go to lipsync/protos/linux/ folder
-cd lipsync/protos/linux/
+# From nim-clients/lipsync/, go to the protos/linux/ folder
+cd protos/linux/
 
 chmod +x compile_protos.sh
 ./compile_protos.sh
@@ -61,8 +75,8 @@ chmod +x compile_protos.sh
 
 To compile protos on Windows, run the following commands:
 ``` bash
-# Go to lipsync/protos/windows/ folder
-cd lipsync/protos/windows/
+# From nim-clients/lipsync/, go to the protos/windows/ folder
+cd protos/windows/
 
 ./compile_protos.bat
 ```
@@ -85,7 +99,7 @@ cd scripts
 #### Usage for Hosted NIM Request
 
 ```bash
-python3 lipsync.py \
+python lipsync.py \
   --target <server_ip:port> \
   --video-input <input_video_file_path> \
   --audio-input <input_audio_file_path> \
@@ -101,7 +115,7 @@ Running the Python client script with no arguments uses the default arguments. A
 
 To view details of the command-line arguments, run the following command:
 ```bash
-python3 lipsync.py -h
+python lipsync.py -h
 ```
 
 #### Example Command to Process the Packaged Sample Inputs
@@ -109,7 +123,7 @@ python3 lipsync.py -h
 The following command uses the sample streamable video and audio input to generate a lip-synced video output file named `out.mp4` in the current folder:
 
 ```bash
-python3 lipsync.py --target 127.0.0.1:8001 --video-input ../assets/sample_video_streamable.mp4 --audio-input ../assets/sample_audio.wav --output out.mp4 
+python lipsync.py --target 127.0.0.1:8001 --video-input ../assets/sample_video_streamable.mp4 --audio-input ../assets/sample_audio_20s.wav --output out.mp4 
 ```
 
 #### Command-Line Arguments
@@ -123,12 +137,12 @@ python3 lipsync.py --target 127.0.0.1:8001 --video-input ../assets/sample_video_
 | `--ssl-root-cert` | `../ssl_key/ssl_ca_cert.pem` | Optional | Path to SSL root certificate. Required if ssl-mode is `MTLS` or `TLS`. |
 | `--target` | `127.0.0.1:8001` | Optional | IP:port of gRPC service. |
 | `--video-input` | `../assets/sample_video.mp4` | Optional | Path to input video file (.mp4 format). |
-| `--audio-input` | `../assets/sample_audio.wav` | Optional | Path to input audio file (.wav or .mp3 format). |
+| `--audio-input` | `../assets/sample_audio_20s.wav` | Optional | Path to input audio file (.wav or .mp3 format). |
 | `--speaker-data-input` | None | Optional | Path to speaker data JSON file. See [Speaker Data](#speaker-data-option). |
 | `--extend-audio` | `unspecified` | Optional | Audio extension handling (`unspecified` or `silence`). |
 | `--extend-video` | `unspecified` | Optional | Video extension handling (`unspecified`, `reverse`, or `forward`). |
-| `--bitrate` | `30` | Optional | Output video bitrate in Mbps. Specify for lossy encoding. |
-| `--idr-interval` | `8` | Optional | IDR frame interval for output video. Specify for lossy encoding. |
+| `--bitrate` | `30` | Optional | Output video bitrate in Mbps. Must be a positive integer. Specify for lossy encoding. |
+| `--idr-interval` | `8` | Optional | IDR frame interval for output video. Must be a positive integer. Specify for lossy encoding. |
 | `--lossless` | `False` | Optional | Enable lossless video encoding (overrides bitrate and IDR settings). |
 | `--output` | `lipsync_output.mp4` | Optional | Path for output video file. |
 | `--output-audio-codec` | `opus` | Optional | Audio codec for output video file (`opus` or `mp3`). |
@@ -137,6 +151,7 @@ python3 lipsync.py --target 127.0.0.1:8001 --video-input ../assets/sample_video_
 | `--mix-background-audio` | `False` | Optional | Enable mixing background audio with the output. |
 | `--background-audio-input` | None | Optional | Path to background audio file (WAV or MP3). Required when `--mix-background-audio` is set. |
 | `--background-audio-volume` | `0.5` | Optional | Volume of background audio (0.0 to 1.0). |
+| `--client-session-id` | random UUID | Optional | Session identifier sent as gRPC metadata and echoed back in the ServiceInfo banner. See [Client Session ID](#client-session-id). |
 
 
 
@@ -161,13 +176,16 @@ python3 lipsync.py --target 127.0.0.1:8001 --video-input ../assets/sample_video_
 ```python lipsync.py --target 127.0.0.1:8001 --speaker-data-input /path/to/speaker_data.json```
 
 - Run with background audio mixing:
-```python lipsync.py --target 127.0.0.1:8001 --mix-background-audio --background-audio-input /path/to/background.wav --background-audio-volume 0.3```
+```python lipsync.py --target 127.0.0.1:8001 --mix-background-audio --background-audio-input ../assets/sample_background_audio.wav --background-audio-volume 0.3```
+
+- Run with an explicit client session id:
+```python lipsync.py --target 127.0.0.1:8001 --client-session-id my-session-001```
 
 - Run with SSL TLS security enabled:
-```python lipsync.py --target 127.0.0.1:8001 --ssl-mode TLS --ssl-root-cert ../ssl_key/ssl_ca.crt```
+```python lipsync.py --target 127.0.0.1:8001 --ssl-mode TLS --ssl-root-cert ../ssl_key/ssl_ca_cert.pem```
 
 - Run with SSL mutual TLS (mTLS) authentication:
-```python lipsync.py --target 127.0.0.1:8001 --ssl-mode MTLS --ssl-key ../ssl_key/ssl_client.key --ssl-cert ../ssl_key/ssl_client.crt --ssl-root-cert ../ssl_key/ssl_ca.crt```
+```python lipsync.py --target 127.0.0.1:8001 --ssl-mode MTLS --ssl-key ../ssl_key/ssl_key_client.pem --ssl-cert ../ssl_key/ssl_cert_client.pem --ssl-root-cert ../ssl_key/ssl_ca_cert.pem```
 
 
 ### 6. Important Usage Notes
@@ -210,7 +228,7 @@ To convert your video into a streamable video, see [Convert a Video to Streamabl
 
 You can then specify the streamable video as input to the NIM by using the `--video-input` parameter.
 ```bash
-   python lipsync.py --target 127.0.0.1:8001 --video-input ../assets/sample_video_streamable.mp4 --audio-input ../assets/sample_audio.wav 
+   python lipsync.py --target 127.0.0.1:8001 --video-input ../assets/sample_video_streamable.mp4 --audio-input ../assets/sample_audio_20s.wav 
 ```
 
 ##### Transactional Mode
@@ -224,7 +242,7 @@ This mode is suitable for:
 
 To run LipSync in transactional mode, provide a non-streamable video as input:
 ```bash
-   python lipsync.py --target 127.0.0.1:8001 --video-input ../assets/sample_video.mp4  --audio-input ../assets/sample_audio.wav 
+   python lipsync.py --target 127.0.0.1:8001 --video-input ../assets/sample_video.mp4  --audio-input ../assets/sample_audio_20s.wav 
 ```
 
 ```{tip}
@@ -243,7 +261,7 @@ This parameter can be useful when working with content in which the audio track 
 
 The following example command extends a 20-second sample video in reverse to match the 30 seconds of audio:
 ```bash
-python lipsync.py --target=127.0.0.1:8001 --extend-video reverse --video-input ../assets/sample_video_streamable_20s.mp4
+python lipsync.py --target=127.0.0.1:8001 --extend-video reverse --video-input ../assets/sample_video_streamable_20s.mp4 --audio-input ../assets/sample_audio.wav
 ```
 
 > **Note:** <span style="color:red">Video extension operations can significantly increase processing time and memory usage. This is because the LipSync service needs to cache video frames in memory. Because raw frames are very large, they are stored as PNG files in memory, which require additional encoding and decoding steps.</span>
@@ -288,7 +306,7 @@ python lipsync.py --target=127.0.0.1:8001 --extend-audio silence --audio-input .
 The speaker data JSON file provides per-frame bounding box and speaker metadata so that the LipSync NIM can target specific facial regions rather than relying on automatic face detection.
 
 ```bash
-python lipsync.py --target 127.0.0.1:8001 --video-input ../assets/sample_video_streamable.mp4 --audio-input ../assets/sample_audio.wav --speaker-data-input ../assets/sample_speaker_data.json
+python lipsync.py --target 127.0.0.1:8001 --video-input ../assets/sample_video_streamable.mp4 --audio-input ../assets/sample_audio_20s.wav --speaker-data-input ../assets/sample_speaker_data.json
 ```
 
 ###### JSON File Format for Speaker Data
@@ -348,7 +366,7 @@ The client reads all frames from the JSON file and sends them to the LipSync NIM
 The LipSync NIM supports mixing a separate background audio track into the output video. This is useful for preserving ambient sounds, music, or other background audio that should accompany the lip-synced output.
 
 ```bash
-python lipsync.py --target 127.0.0.1:8001 --mix-background-audio --background-audio-input /path/to/background.wav --background-audio-volume 0.3
+python lipsync.py --target 127.0.0.1:8001 --mix-background-audio --background-audio-input ../assets/sample_background_audio.wav --background-audio-volume 0.3
 ```
 
 - `--mix-background-audio`: Enables background audio mixing.
@@ -365,6 +383,28 @@ The `--head-movement-speed` option controls how the NIM handles head movement in
 ```bash
 python lipsync.py --target 127.0.0.1:8001 --head-movement-speed 0
 ```
+
+##### Client Session ID
+Every response stream opens with a `ServiceInfo` banner that identifies the NIM serving the request and carries two correlation tokens:
+
+- `server_request_id`: a GUID minted by the server, which prefixes every log line for that request.
+- `client_session_id`: whatever the client sent in the `client-session-id` gRPC metadata header, echoed back verbatim. It is empty if the client sends nothing.
+
+The client mints a random UUID for each run by default, so the banner and the server logs can always be tied together. Pass `--client-session-id` to supply your own identifier, for example to group a batch of runs under one job id:
+
+```bash
+python lipsync.py --target 127.0.0.1:8001 --client-session-id my-session-001
+```
+
+The banner is printed by the client as it receives the stream:
+
+```
+ServiceInfo: feature=lipsync version=<version> model=Lipsync server_request_id=<guid> client_session_id=my-session-001
+```
+
+To send no session id at all, pass an empty string: `--client-session-id ""`.
+
+> **Note:** The session id is opaque to the NIM — it is never interpreted, only logged and echoed. Do not put sensitive data in it.
 
 
 > **Note**: **For an interactive experience and to explore all the configuration options described above, you can use the provided Jupyter notebook that demonstrates comprehensive LipSync NIM functionality. The notebook is located at [`notebook/lipsync_notebook.ipynb`](notebook/lipsync_notebook.ipynb) and can be run directly within your VS Code editor or any Jupyter environment.**
@@ -388,7 +428,7 @@ Only `de`, `es`, and `fr` are supported. Any other values causes the container t
 ##### Lipsync Debug Mode
 The LipSync NIM includes a debug mode that provides visual feedback during processing. When enabled, this mode overlays diagnostic information on each output frame, making it easier to verify effect behavior and troubleshoot issues.
 
-To enable debug mode, set the environment variable `LIPSYNC_DEBUG_MODE=1` when launching the NIM container:
+To enable debug mode, set the environment variable `NV_AI4M_LS_DEBUG_MODE=1` when launching the NIM container:
 
 ```bash
 docker run -it --rm --name=lipsync-nim \
@@ -396,7 +436,7 @@ docker run -it --rm --name=lipsync-nim \
   --gpus=all \
   --shm-size=8GB \
   -e NGC_API_KEY=$NGC_API_KEY \
-  -e LIPSYNC_DEBUG_MODE=1 \
+  -e NV_AI4M_LS_DEBUG_MODE=1 \
   -p 8000:8000 \
   -p 8001:8001 \
   nvcr.io/nim/nvidia/lipsync:latest

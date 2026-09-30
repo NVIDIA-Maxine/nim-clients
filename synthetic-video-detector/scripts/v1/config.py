@@ -28,9 +28,9 @@ import sys
 from dataclasses import dataclass
 
 # Setup paths for local imports (align with other clients)
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))  # noqa: E402
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))  # noqa: E402
 SCRIPT_PATH = str(pathlib.Path(__file__).parent.resolve())
-sys.path.append(os.path.join(SCRIPT_PATH, "../interfaces"))
+sys.path.append(os.path.join(SCRIPT_PATH, "../../interfaces"))
 
 # Local imports
 from utils.utils import (  # noqa: E402
@@ -61,7 +61,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--video-input",
         type=str,
-        default="../assets/fake_sample_video.mp4",
+        default="../../assets/fake_sample_video.mp4",
         help="Path to the input video file to analyze (supports MP4 only)",
     )
     parser.add_argument(

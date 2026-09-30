@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import eyecontact_pb2 as eyecontact__pb2
+from nvidia.maxine.eyecontact.v1 import eyecontact_pb2 as nvidia_dot_maxine_dot_eyecontact_dot_v1_dot_eyecontact__pb2
 
 GRPC_GENERATED_VERSION = '1.67.1'
 GRPC_VERSION = grpc.__version__
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in eyecontact_pb2_grpc.py depends on'
+        + f' but the generated code in nvidia/maxine/eyecontact/v1/eyecontact_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -38,8 +38,8 @@ class MaxineEyeContactServiceStub(object):
         """
         self.RedirectGaze = channel.stream_stream(
                 '/nvidia.maxine.eyecontact.v1.MaxineEyeContactService/RedirectGaze',
-                request_serializer=eyecontact__pb2.RedirectGazeRequest.SerializeToString,
-                response_deserializer=eyecontact__pb2.RedirectGazeResponse.FromString,
+                request_serializer=nvidia_dot_maxine_dot_eyecontact_dot_v1_dot_eyecontact__pb2.RedirectGazeRequest.SerializeToString,
+                response_deserializer=nvidia_dot_maxine_dot_eyecontact_dot_v1_dot_eyecontact__pb2.RedirectGazeResponse.FromString,
                 _registered_method=True)
 
 
@@ -76,8 +76,8 @@ def add_MaxineEyeContactServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'RedirectGaze': grpc.stream_stream_rpc_method_handler(
                     servicer.RedirectGaze,
-                    request_deserializer=eyecontact__pb2.RedirectGazeRequest.FromString,
-                    response_serializer=eyecontact__pb2.RedirectGazeResponse.SerializeToString,
+                    request_deserializer=nvidia_dot_maxine_dot_eyecontact_dot_v1_dot_eyecontact__pb2.RedirectGazeRequest.FromString,
+                    response_serializer=nvidia_dot_maxine_dot_eyecontact_dot_v1_dot_eyecontact__pb2.RedirectGazeResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -107,8 +107,8 @@ class MaxineEyeContactService(object):
             request_iterator,
             target,
             '/nvidia.maxine.eyecontact.v1.MaxineEyeContactService/RedirectGaze',
-            eyecontact__pb2.RedirectGazeRequest.SerializeToString,
-            eyecontact__pb2.RedirectGazeResponse.FromString,
+            nvidia_dot_maxine_dot_eyecontact_dot_v1_dot_eyecontact__pb2.RedirectGazeRequest.SerializeToString,
+            nvidia_dot_maxine_dot_eyecontact_dot_v1_dot_eyecontact__pb2.RedirectGazeResponse.FromString,
             options,
             channel_credentials,
             insecure,

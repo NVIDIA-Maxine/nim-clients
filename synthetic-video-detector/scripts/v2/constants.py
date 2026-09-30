@@ -1,6 +1,6 @@
-#!/bin/bash
-
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: MIT
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -20,12 +20,9 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-import os
-import sys
-from . import eyecontact_pb2
+# Size of each data chunk when streaming the MP4 file to the service
+DATA_CHUNK_SIZE = 1024 * 1024  # 1 MB
 
-pwd = os.path.join(os.path.dirname(__file__))
-sys.path.insert(0, pwd)
-from . import eyecontact_pb2_grpc
-
-sys.path.remove(pwd)
+# Default decision threshold applied to the calibrated synthetic probability.
+# V2 operating points: balanced = 0.44 (default), conservative = 0.26.
+CLASSIFICATION_THRESHOLD = 0.44

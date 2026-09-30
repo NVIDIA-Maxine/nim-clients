@@ -27,6 +27,7 @@ package nvidia.ai4m.activespeakerdetection.v1;
 import "google/protobuf/empty.proto";
 import "nvidia/ai4m/audio/v1/audio.proto";
 import "nvidia/ai4m/common/v1/common.proto";
+import "nvidia/ai4m/common/v1/service_info.proto";
 import "nvidia/ai4m/video/v1/video.proto";
 
 // ActiveSpeakerDetectionService provides APIs for active speaker detection
@@ -70,6 +71,18 @@ enum AudioSourceConfig {
   AUDIO_SOURCE_CONFIG_EMBEDDED_IN_VIDEO = 2;
 }
 
+// Voice-activity smoothing level applied to speaking decisions.
+enum VoiceActivitySmoothing {
+  // Unspecified; use the deployment default.
+  VOICE_ACTIVITY_SMOOTHING_UNSPECIFIED = 0;
+  // Disable voice-activity smoothing.
+  VOICE_ACTIVITY_SMOOTHING_OFF = 1;
+  // Low smoothing.
+  VOICE_ACTIVITY_SMOOTHING_LOW = 2;
+  // High smoothing.
+  VOICE_ACTIVITY_SMOOTHING_HIGH = 3;
+}
+
 message ActiveSpeakerDetectionConfig {
   // Input audio configuration
   nvidia.ai4m.audio.v1.AudioConfig input_audio_config = 1;
@@ -82,6 +95,9 @@ message ActiveSpeakerDetectionConfig {
   // Minimum confidence score in (0, 1) to consider a face as speaking
   // Default: 0.5986
   optional float speaker_detection_threshold = 4;
+  // Voice-activity smoothing level. When unset or UNSPECIFIED, the deployment
+  // default from NV_AI4M_ASD_VA_SMOOTHING is used.
+  optional VoiceActivitySmoothing voice_activity_smoothing = 5;
 }
 
 message ActiveSpeakerDetectionData {
@@ -144,6 +160,9 @@ message DetectActiveSpeakerResponse {
     ActiveSpeakerDetectionResult active_speaker_detection_result = 2;
     // Empty message used to maintain connection
     google.protobuf.Empty keepalive = 3;
+    // Identifies the NIM producing the stream and the request being
+    // served (feature name/version, model identity, and request/session IDs).
+    nvidia.ai4m.common.v1.ServiceInfo service_info = 4;
   }
 }
 

@@ -56,8 +56,53 @@ from utils.utils import (  # noqa: E402
     validate_preview_args,
     create_request_metadata,
 )
-import eyecontact_pb2  # noqa: E402
-import eyecontact_pb2_grpc  # noqa: E402
+from nvidia.maxine.eyecontact.v1 import eyecontact_pb2  # noqa: E402
+from nvidia.maxine.eyecontact.v1 import eyecontact_pb2_grpc  # noqa: E402
+
+# gRPC metadata key the server inspects to recover the client-assigned session
+# id (see NV_AI4M_SESSION_ID_METADATA_KEY on the server; defaults to this).
+CLIENT_SESSION_ID_METADATA_KEY = "client-session-id"
+
+
+def build_request_metadata(args) -> tuple | None:
+    """Build the gRPC request metadata, including the client session id.
+
+    Combines the preview-mode metadata (authorization / function-id) with the
+    optional client-session-id header so the server can echo it back in
+    ServiceInfo and correlate logs.
+
+    Args:
+        args: Parsed command line arguments.
+
+    Returns:
+        A tuple of ``(key, value)`` metadata pairs, or ``None`` if empty.
+    """
+    metadata = list(create_request_metadata(args) or ())
+    client_session_id = getattr(args, "client_session_id", None)
+    if client_session_id:
+        metadata.append((CLIENT_SESSION_ID_METADATA_KEY, client_session_id))
+    return tuple(metadata) if metadata else None
+
+
+def print_service_info(service_info) -> None:
+    """Print the one-shot ServiceInfo provenance banner from the server.
+
+    Identifies the NIM producing the stream and the request being served
+    (feature name/version, model identity, and request/session IDs).
+
+    Args:
+        service_info: nvidia.ai4m.common.v1.ServiceInfo message from the response.
+    """
+    print("\n" + "-" * 60)
+    print("Service info (from server)")
+    print("-" * 60)
+    print(f"Feature name      : {service_info.feature_name}")
+    print(f"Feature version   : {service_info.feature_version}")
+    print(f"Model info        : {service_info.model_info}")
+    print(f"Server request ID : {service_info.server_request_id}")
+    print(f"Client session ID : {service_info.client_session_id}")
+    print("-" * 60)
+    sys.stdout.flush()
 
 
 def generate_request_for_inference(
@@ -120,6 +165,7 @@ def write_output_file_from_response(
     # Initialize progress bar for streaming data reception
     chunk_count = 0
     total_bytes = 0
+    service_info_received = False
 
     with open(output_filepath, "wb") as fd:
         # Create progress bar that shows streaming progress
@@ -135,6 +181,12 @@ def write_output_file_from_response(
 
         try:
             for response in response_iter:
+                if response.HasField("service_info"):
+                    if not service_info_received:
+                        print_service_info(response.service_info)
+                        service_info_received = True
+                    continue
+
                 if response.HasField("video_file_data"):
                     chunk_data = response.video_file_data
                     fd.write(chunk_data)
@@ -178,9 +230,6 @@ def process_request(
             metadata=request_metadata,
         )
 
-        # Skip the echo response if configuration was sent
-        next(responses)
-
         write_output_file_from_response(
             response_iter=responses, output_filepath=eyecontact_config.output_filepath
         )
@@ -200,9 +249,9 @@ def main():
     4. Request processing
     """
     args = parse_args()
-    eyecontact_config = EyeContactConfig.from_args(args)
 
     try:
+        eyecontact_config = EyeContactConfig.from_args(args)
         eyecontact_config.validate_eyecontact_config()
         validate_ssl_args(args)
         validate_preview_args(args)
@@ -212,8 +261,8 @@ def main():
 
     print(eyecontact_config)
 
-    # Prepare request metadata for preview mode
-    request_metadata = create_request_metadata(args)
+    # Prepare request metadata for preview mode and log correlation
+    request_metadata = build_request_metadata(args)
 
     # Check ssl-mode and create channel_credentials for that mode
     if args.ssl_mode != "DISABLED":

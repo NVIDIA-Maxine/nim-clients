@@ -54,6 +54,7 @@ echo "Using OUT_DIR: $OUT_DIR"
 # Proto files to compile
 PROTO_FILES=(
     "$PROTO_ROOT/nvidia/ai4m/common/v1/common.proto"
+    "$PROTO_ROOT/nvidia/ai4m/common/v1/service_info.proto"
     "$PROTO_ROOT/nvidia/ai4m/audio/v1/audio.proto"
     "$PROTO_ROOT/nvidia/ai4m/video/v1/video.proto"
     "$PROTO_ROOT/nvidia/ai4m/lipsync/v1/lipsync.proto"

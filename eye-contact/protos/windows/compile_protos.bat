@@ -33,7 +33,7 @@ setlocal
 set "SCRIPT_DIR=%~dp0"
 
 :: Define the protobufs and output directories
-set "PROTOS_DIR=%SCRIPT_DIR%..\proto\nvidia\maxine\eyecontact\v1"
+set "PROTOS_DIR=%SCRIPT_DIR%..\proto"
 set "OUT_DIR=%SCRIPT_DIR%..\..\interfaces\"
 
 :: Log the paths for debugging
@@ -52,7 +52,8 @@ python -m grpc_tools.protoc -I=%PROTOS_DIR% ^
                             --python_out=%OUT_DIR% ^
                             --pyi_out=%OUT_DIR% ^
                             --grpc_python_out=%OUT_DIR% ^
-                            %PROTOS_DIR%\eyecontact.proto
+                            %PROTOS_DIR%\nvidia\ai4m\common\v1\service_info.proto ^
+                            %PROTOS_DIR%\nvidia\maxine\eyecontact\v1\eyecontact.proto
 if errorlevel 1 (
     echo [Error] Failed to execute grpc_tools.protoc. Please check the paths and dependencies.
     exit /b 1

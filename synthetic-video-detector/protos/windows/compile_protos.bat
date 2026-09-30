@@ -19,7 +19,11 @@ REM LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 REM FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 REM DEALINGS IN THE SOFTWARE.
 
-REM This script compiles Protocol Buffer (protobuf) definitions for NVIDIA Maxine Synthetic Video Detector NIM on Windows.
+REM This script compiles Protocol Buffer (protobuf) definitions for NVIDIA Synthetic Video Detector NIM on Windows.
+REM
+REM Both gRPC API generations are compiled: the v1 API (nvidia.maxine) and the
+REM v2 API (nvidia.ai4m). Stubs are emitted under interfaces\ mirroring each
+REM proto package, so the two generations never collide.
 REM
 REM Execute the script using `compile_protos.bat`
 REM
@@ -31,17 +35,28 @@ REM Get the script directory
 set SCRIPT_DIR=%~dp0
 
 REM Define paths for proto files and output directory
-set PROTOS_DIR=%SCRIPT_DIR%..\proto\nvidia\maxine\syntheticvideodetector\v1
+set PROTO_ROOT=%SCRIPT_DIR%..\proto
 set OUT_DIR=%SCRIPT_DIR%..\..\interfaces
 
-REM Check if required directories and files exist
-if not exist "%PROTOS_DIR%" (
-    echo [Error] Protos directory does not exist: %PROTOS_DIR%
+REM The v1 service lives in the nvidia.maxine package; the v2 service lives in
+REM nvidia.ai4m alongside the shared pre-signed URL (ingest) proto it imports.
+set MAXINE_SVD=%PROTO_ROOT%\nvidia\maxine\syntheticvideodetector\v1\syntheticvideodetector.proto
+set AI4M_INGEST=%PROTO_ROOT%\nvidia\ai4m\ingest\v1\presigned_url.proto
+set AI4M_SVD=%PROTO_ROOT%\nvidia\ai4m\syntheticvideodetector\v1\syntheticvideodetector.proto
+
+REM Check if required files exist
+if not exist "%MAXINE_SVD%" (
+    echo [Error] Protobuf file not found: %MAXINE_SVD%
     exit /b 1
 )
 
-if not exist "%PROTOS_DIR%\syntheticvideodetector.proto" (
-    echo [Error] Protobuf file not found: %PROTOS_DIR%\syntheticvideodetector.proto
+if not exist "%AI4M_INGEST%" (
+    echo [Error] Protobuf file not found: %AI4M_INGEST%
+    exit /b 1
+)
+
+if not exist "%AI4M_SVD%" (
+    echo [Error] Protobuf file not found: %AI4M_SVD%
     exit /b 1
 )
 
@@ -52,12 +67,14 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
+if not exist "%OUT_DIR%" mkdir "%OUT_DIR%"
+
 REM Log the paths for debugging
-echo Using PROTOS_DIR: %PROTOS_DIR%
+echo Using PROTO_ROOT: %PROTO_ROOT%
 echo Using OUT_DIR: %OUT_DIR%
 
 REM Run grpc_tools.protoc
-python -m grpc_tools.protoc -I="%PROTOS_DIR%" --python_out="%OUT_DIR%" --pyi_out="%OUT_DIR%" --grpc_python_out="%OUT_DIR%" "%PROTOS_DIR%\syntheticvideodetector.proto"
+python -m grpc_tools.protoc -I="%PROTO_ROOT%" --python_out="%OUT_DIR%" --pyi_out="%OUT_DIR%" --grpc_python_out="%OUT_DIR%" "%MAXINE_SVD%" "%AI4M_INGEST%" "%AI4M_SVD%"
 
 REM Check if the command succeeded
 if %ERRORLEVEL% neq 0 (
@@ -65,7 +82,21 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
+REM Create __init__.py files for the package hierarchy
+for %%D in (
+    "%OUT_DIR%\nvidia"
+    "%OUT_DIR%\nvidia\maxine"
+    "%OUT_DIR%\nvidia\maxine\syntheticvideodetector"
+    "%OUT_DIR%\nvidia\maxine\syntheticvideodetector\v1"
+    "%OUT_DIR%\nvidia\ai4m"
+    "%OUT_DIR%\nvidia\ai4m\ingest"
+    "%OUT_DIR%\nvidia\ai4m\ingest\v1"
+    "%OUT_DIR%\nvidia\ai4m\syntheticvideodetector"
+    "%OUT_DIR%\nvidia\ai4m\syntheticvideodetector\v1"
+) do (
+    if exist %%D if not exist %%D\__init__.py type nul > %%D\__init__.py
+)
+
 echo gRPC files generated successfully.
 
 endlocal
-
