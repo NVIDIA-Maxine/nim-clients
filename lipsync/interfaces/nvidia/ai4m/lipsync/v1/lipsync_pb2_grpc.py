@@ -76,7 +76,7 @@ class LipSyncServiceServicer(object):
         request: Stream of LipsyncRequest messages containing
         either configuration or input data
         response: Stream of LipsyncResponse messages containing either
-        configuration, video data, or keepalive
+        service info, configuration, video data, or keepalive
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')

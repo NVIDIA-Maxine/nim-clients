@@ -36,7 +36,7 @@ DEFAULT_BITRATE = 30  # Mbps
 DEFAULT_IDR_INTERVAL = 8  # frames
 DEFAULT_STREAMABLE_VIDEO_PATH = "../assets/sample_video_streamable.mp4"
 DEFAULT_NON_STREAMABLE_VIDEO_PATH = "../assets/sample_video.mp4"
-DEFAULT_AUDIO_PATH = "../assets/sample_audio.wav"
+DEFAULT_AUDIO_PATH = "../assets/sample_audio_20s.wav"
 
 
 # Configuration mappings for different options
@@ -58,3 +58,9 @@ AUDIO_CODEC_CONFIGS = {
     "wav": audio_pb2.AudioCodec.AUDIO_CODEC_WAV,
     "opus": audio_pb2.AudioCodec.AUDIO_CODEC_OPUS,
 }
+
+# The NIM decodes only WAV and MP3 on the way in, and muxes only Opus and MP3 on
+# the way out. Sending anything else is rejected server-side with INVALID_ARGUMENT,
+# so the client validates against these rather than the full codec map above.
+INPUT_AUDIO_CODECS = ("wav", "mp3")
+OUTPUT_AUDIO_CODECS = ("opus", "mp3")

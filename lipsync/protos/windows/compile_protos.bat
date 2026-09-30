@@ -54,6 +54,7 @@ python -m grpc_tools.protoc -I=%PROTO_ROOT% ^
                             --pyi_out=%OUT_DIR% ^
                             --grpc_python_out=%OUT_DIR% ^
                             %PROTOS_BASE%\common\v1\common.proto ^
+                            %PROTOS_BASE%\common\v1\service_info.proto ^
                             %PROTOS_BASE%\audio\v1\audio.proto ^
                             %PROTOS_BASE%\video\v1\video.proto ^
                             %PROTOS_BASE%\lipsync\v1\lipsync.proto

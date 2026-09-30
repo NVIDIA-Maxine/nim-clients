@@ -23,13 +23,14 @@ from dataclasses import dataclass
 import argparse
 import os
 from constants import (
-    AUDIO_CODEC_CONFIGS,
     DEFAULT_AUDIO_PATH,
     DEFAULT_BITRATE,
     DEFAULT_IDR_INTERVAL,
     DEFAULT_NON_STREAMABLE_VIDEO_PATH,
     EXTEND_AUDIO_CONFIGS,
     EXTEND_VIDEO_CONFIGS,
+    INPUT_AUDIO_CODECS,
+    OUTPUT_AUDIO_CODECS,
 )
 
 import json
@@ -151,6 +152,14 @@ def create_argument_parser() -> argparse.ArgumentParser:
         default=0.5,
         help="Volume of the background audio (0.0 to 1.0). Default: 0.5.",
     )
+    parser.add_argument(
+        "--client-session-id",
+        type=str,
+        default=None,
+        help="Client-assigned session identifier, sent as gRPC metadata and echoed back in the "
+        "ServiceInfo banner so this run can be correlated with the server logs. A random UUID "
+        "is generated when omitted; pass an empty string to send no session id.",
+    )
     return parser
 
 
@@ -264,11 +273,9 @@ class LipSyncConfig:
             raise RuntimeError("Only MP4 video format is supported")
 
         # Validate audio file
-        is_audio_available = is_file_available(
-            self.audio_filepath, list(AUDIO_CODEC_CONFIGS.keys())
-        )
+        is_audio_available = is_file_available(self.audio_filepath, list(INPUT_AUDIO_CODECS))
         if not is_audio_available:
-            raise RuntimeError("Only WAV, MP3, and Opus audio formats are supported")
+            raise RuntimeError("Only WAV and MP3 audio formats are supported for input")
         self.input_audio_codec = os.path.splitext(self.audio_filepath)[1].lower().lstrip(".")
 
         # Validate speaker data JSON file if provided
@@ -276,6 +283,7 @@ class LipSyncConfig:
             is_json_available = is_file_available(self.speaker_data_filepath, ["json"])
             if not is_json_available:
                 raise RuntimeError("Only JSON format is supported for speaker data file")
+            self._validate_speaker_data_file()
             self.is_speaker_info_provided = True
         else:
             self.is_speaker_info_provided = False
@@ -285,8 +293,21 @@ class LipSyncConfig:
                 "head_movement_speed must be 0 (static/slow-moving head) or 1 (fast-moving head)"
             )
 
-        if self.output_audio_codec not in ("opus", "mp3"):
+        if self.output_audio_codec not in OUTPUT_AUDIO_CODECS:
             raise RuntimeError("Only Opus and MP3 audio codecs are supported for output")
+
+        # Bitrate and IDR interval only reach the encoder on the lossy path, so they
+        # are checked only when they will actually be sent.
+        if not self.lossless and not self.custom_encoding_params:
+            if self.bitrate <= 0:
+                raise RuntimeError("bitrate must be a positive integer (Mbps)")
+            if self.idr_interval <= 0:
+                raise RuntimeError("idr_interval must be a positive integer (frames)")
+
+        # The volume is validated whether or not mixing is enabled, so a bad value is
+        # reported even when the user forgot --mix-background-audio.
+        if not 0.0 <= self.background_audio_volume <= 1.0:
+            raise RuntimeError("background_audio_volume must be between 0.0 and 1.0")
 
         # Validate background audio if mixing is enabled
         if self.mix_background_audio:
@@ -295,11 +316,79 @@ class LipSyncConfig:
                     "Background audio file path is required when --mix-background-audio is set"
                 )
             is_bg_audio_available = is_file_available(
-                self.background_audio_filepath, list(AUDIO_CODEC_CONFIGS.keys())
+                self.background_audio_filepath, list(INPUT_AUDIO_CODECS)
             )
             if not is_bg_audio_available:
                 raise RuntimeError(
-                    "Only WAV, MP3, and Opus audio formats are supported for background audio"
+                    "Only WAV and MP3 audio formats are supported for background audio"
                 )
-
         return True
+
+    def _validate_speaker_data_file(self) -> None:
+        """Parse and schema-check the speaker data file before the request opens.
+
+        The request generator reads this file lazily while streaming, so without this
+        check a syntax or schema error surfaces as an opaque gRPC UNKNOWN status mid
+        request instead of an actionable message.
+
+        Raises:
+            RuntimeError: If the file is not valid JSON or does not match the schema.
+        """
+        path = self.speaker_data_filepath
+        try:
+            with open(path, "r") as fd:
+                data = json.load(fd)
+        except json.JSONDecodeError as e:
+            raise RuntimeError(f"Invalid JSON in speaker data file {path}: {e}") from e
+        except OSError as e:
+            raise RuntimeError(f"Could not read speaker data file {path}: {e}") from e
+
+        if not isinstance(data, dict):
+            raise RuntimeError(
+                f"Speaker data file {path} must contain a JSON object with a 'frames' key"
+            )
+
+        frames = data.get("frames")
+        if frames is None:
+            raise RuntimeError(f"Speaker data file {path} is missing the 'frames' key")
+        if not isinstance(frames, list):
+            raise RuntimeError(f"'frames' in speaker data file {path} must be an array")
+
+        for i, frame in enumerate(frames):
+            where = f"frames[{i}]"
+            if not isinstance(frame, dict):
+                raise RuntimeError(f"{where} in {path} must be an object")
+
+            if "bypass" in frame and not isinstance(frame["bypass"], bool):
+                raise RuntimeError(f"{where}.bypass in {path} must be true or false")
+
+            speakers = frame.get("speakers", [])
+            if not isinstance(speakers, list):
+                raise RuntimeError(f"{where}.speakers in {path} must be an array")
+
+            for j, speaker in enumerate(speakers):
+                sw = f"{where}.speakers[{j}]"
+                if not isinstance(speaker, dict):
+                    raise RuntimeError(f"{sw} in {path} must be an object")
+
+                bbox = speaker.get("bbox")
+                if bbox is None:
+                    raise RuntimeError(f"{sw} in {path} is missing 'bbox'")
+                if not isinstance(bbox, list) or len(bbox) != 4:
+                    raise RuntimeError(
+                        f"{sw}.bbox in {path} must be an array of 4 numbers "
+                        f"[x, y, width, height]"
+                    )
+                for k, v in enumerate(bbox):
+                    if isinstance(v, bool) or not isinstance(v, (int, float)):
+                        raise RuntimeError(f"{sw}.bbox[{k}] in {path} must be a number")
+
+                speaker_id = speaker.get("speaker_id")
+                if speaker_id is not None and (
+                    isinstance(speaker_id, bool) or not isinstance(speaker_id, int)
+                ):
+                    raise RuntimeError(f"{sw}.speaker_id in {path} must be an integer")
+
+                is_speaking = speaker.get("is_speaking")
+                if is_speaking is not None and not isinstance(is_speaking, bool):
+                    raise RuntimeError(f"{sw}.is_speaking in {path} must be true or false")
