@@ -1,0 +1,175 @@
+// SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION &
+// AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: MIT
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+// and/or sell copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+
+syntax = "proto3";
+
+package nvidia.ai4m.body_pose.v1;
+
+import "google/protobuf/empty.proto";
+import "nvidia/ai4m/common/v1/service_info.proto";
+
+// The BodyPoseService runs quality-mode 3D Body Pose Estimation on a
+// video stream, using caller-supplied per-frame tracked body boxes.
+//
+// The client streams the COMPRESSED video file as byte chunks; the SERVER
+// decodes it frame by frame (BGR uint8) and feeds each frame to the Triton
+// 3DBodyPoseEstimation backend.
+// The service does NOT run body detection: the caller supplies tracked boxes
+// per frame (sent up front as tracked_bboxes).
+//
+// Outputs are DELAYED and gated by ready: a ready=true response carries the
+// pose for an earlier decoded frame (identified by frame_id). After the video
+// ends the server drains the buffered tail and emits a stream_flushed=true
+// response.
+service BodyPoseService {
+  // Bidirectional streaming pose estimation over one video stream.
+  //
+  // Protocol:
+  //   1. Client sends a first request with BodyPoseConfig and the full
+  //      tracked_bboxes annotation (all frames).
+  //   2. Client streams the compressed video file as video_data chunks.
+  //   3. Server decodes frames, runs pose per frame, and streams back
+  //      ready=true responses (delayed, frame-aligned) plus periodic
+  //      keep_alive messages, ending with a stream_flushed=true response.
+  rpc EstimateBodyPose(stream BodyPoseRequest)
+      returns (stream BodyPoseResponse) {}
+}
+
+// A 2D point in full-image pixel coordinates.
+message Point2f {
+  float x = 1;
+  float y = 2;
+}
+
+// A 3D point in camera coordinates, meters.
+message Point3f {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+}
+
+// A normalized quaternion (x, y, z, w). Consumers must treat q and -q as equal.
+message Quaternion {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+  float w = 4;
+}
+
+// A rigid 3D transform: translation (meters) plus rotation quaternion.
+message Transform3f {
+  Point3f translation = 1;
+  Quaternion rotation = 2;
+}
+
+// A tracked body box in full-image pixel coordinates, plus its tracking id.
+// Used both as caller input and as the server's frame-aligned echo output.
+message BoundingBox {
+  float x = 1;
+  float y = 2;
+  float width = 3;
+  float height = 4;
+  uint32 tracking_id = 5;
+}
+
+// Tracked boxes for one input frame, keyed by the decoded frame index.
+message FrameBoxes {
+  uint32 frame_id = 1;
+  repeated BoundingBox boxes = 2;
+}
+
+// Per-stream configuration, sent only in the first request.
+message BodyPoseConfig {
+  // Optional pinhole focal length in pixels (fx = fy). 0 or unset requests the
+  // SDK default derived from image size.
+  optional float focal_length = 1;
+
+  // Static-camera contact correction, which runs inverse kinematics and is
+  // therefore significantly slower. The server boots with it OFF unless started
+  // with BODY_POSE_ENABLE_CONTACT=1; unset accepts whatever the server runs with.
+  //
+  // SERVER-WIDE AND FIXED AT STARTUP. The AR SDK backend latches this when it
+  // loads the model and cannot change it afterwards. A request asking for the
+  // other value is processed with the server's value, and the response stream's
+  // initial metadata carries a `warning` entry naming both values and the
+  // BODY_POSE_ENABLE_CONTACT to start a server with. Health stays SERVING.
+  // Deployments that need both values run one server per value.
+  optional bool enable_contact = 2;
+}
+
+// One request in the stream.
+message BodyPoseRequest {
+  // Set on the first request only.
+  BodyPoseConfig config = 1;
+
+  // Compressed video file bytes (chunked; recommended ~256 KiB per message).
+  bytes video_data = 2;
+
+  // Tracked boxes per frame. Send the full annotation up front (in the first
+  // request); may be split across the first few requests before video_data.
+  repeated FrameBoxes tracked_bboxes = 3;
+}
+
+// Pose outputs for one body in a delayed output frame. Per-joint arrays are in
+// the public SDK skeleton order and are all length J (77 for this model).
+message Body {
+  // Frame-aligned echoed tracked box + tracking id for this body.
+  BoundingBox bbox = 1;
+  // 2D keypoints in full-image pixels.
+  repeated Point2f keypoints_2d = 2;
+  // Posed 3D joint positions in camera coordinates, meters.
+  repeated Point3f keypoints_3d = 3;
+  // Per-keypoint confidences.
+  repeated float keypoint_confidence = 4;
+  // Local joint rotations relative to the rest pose, SDK skeleton order.
+  repeated Quaternion joint_rotations = 5;
+  // Model-predicted rest-pose joint positions, root-relative, meters.
+  repeated Point3f rest_pose = 6;
+  // Root pose in camera coordinates.
+  Transform3f root_pose = 7;
+}
+
+// One response in the stream.
+message BodyPoseResponse {
+  // True when this response carries a valid delayed output frame; when false,
+  // bodies is empty and should be ignored.
+  bool ready = 1;
+  // True once flush has drained all remaining outputs for the stream.
+  bool stream_flushed = 2;
+  // The bodies for the delayed output frame (num_bodies entries).
+  repeated Body bodies = 3;
+  // Decoded input frame index this delayed output corresponds to.
+  uint32 frame_id = 4;
+  // Keep-alive signal emitted while the server is busy decoding/inferring.
+  optional google.protobuf.Empty keep_alive = 5;
+  // Pinhole focal length in pixels (fx = fy) to reproject keypoints_3d with:
+  // BodyPoseConfig.focal_length when it was usable, else the frame diagonal.
+  // Constant for the stream. Note this is the reprojection focal, not
+  // necessarily the one the model ran with -- when the config did not request a
+  // usable focal the model uses the SDK's own default, which the backend does
+  // not report.
+  float focal_length = 6;
+  // Provenance banner identifying the NIM producing the stream and the request
+  // being served (feature name/version, model identity, and request/session
+  // IDs). Sent once, as the first response of the stream, ahead of any pose.
+  optional nvidia.ai4m.common.v1.ServiceInfo service_info = 7;
+}

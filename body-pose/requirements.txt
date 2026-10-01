@@ -1,0 +1,5 @@
+grpcio==1.67.1
+grpcio-tools==1.67.1
+opencv-python-headless==4.11.0.86
+numpy==1.26.4
+tqdm==4.67.1
