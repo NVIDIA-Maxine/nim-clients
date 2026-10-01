@@ -13,6 +13,9 @@ This repository provides sample client applications to interact with NVIDIA AI f
 - [`bnr`](bnr) - NVIDIA Background Noise Removal (BNR) model is an audio background noise removal model from NVIDIA. It removes a variety of background noises from audio recordings. It also retains emotive tones in speech, such as happy, sad, excited and angry tones.
 [[Demo](https://build.nvidia.com/nvidia/bnr)] , [[Docs](https://docs.nvidia.com/nim/maxine/bnr/latest/index.html)]
 
+- [`body-pose`](body-pose) - NVIDIA 3D Body Pose estimates the 3D pose and skeleton of every tracked person in a video, returning per-frame 2D/3D keypoints, per-joint rotations, rest pose and root pose on the 77-joint NOVA skeleton.
+[[Demo](https://build.nvidia.com/nvidia/body-pose)] , [[Docs](https://docs.nvidia.com/nim/maxine/body-pose/latest/index.html)]
+
 - [`eye-contact`](eye-contact) - NVIDIA Eye Contact feature estimates the gaze angles of a person in a video and redirects the gaze in the output video to make it frontal.
 [[Demo](https://build.nvidia.com/nvidia/eyecontact)] , [[Docs](https://docs.nvidia.com/nim/maxine/eye-contact/latest/index.html)]
 
